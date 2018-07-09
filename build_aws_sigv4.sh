@@ -13,11 +13,13 @@ get_check() {
     pushd aws_sigv4/deps
     git clone --depth 1 https://github.com/libcheck/check.git
     cd check
-    mkdir build
-    cd build
-    cmake ../
+    git fetch --tags
+    # Use a stable release version
+    git checkout tags/0.12.0 -b 0.12.0
+    autoreconf --install
+    ./configure
     make
-    #CTEST_OUTPUT_ON_FAILURE=1 make test
+    make check
     sudo make install
     popd
     touch "aws_sigv4/deps/check_installed"
@@ -28,6 +30,7 @@ build_aws_sigv4() {
     pushd build
     cmake ../aws_sigv4
     make
+    make test
     popd
 }
 
