@@ -8,15 +8,23 @@ START_TEST (DummyTest_Dummy)
 }
 END_TEST
 
+START_TEST (DummyTest_BasicLib)
+{
+    ck_assert_int_eq(0, test());
+}
+END_TEST
+
 Suite * dummy_test_suite(void)
 {
     Suite *s;
     s = suite_create("DummyTest");
 
-    TCase *tc_dummy;
-    tc_dummy = tcase_create("DummyTest_Dummy");
+    TCase *tc_dummy     = tcase_create("DummyTest_Dummy");
+    TCase *tc_basic_lib = tcase_create("DummyTest_BasicLib");
     tcase_add_test(tc_dummy, DummyTest_Dummy);
+    tcase_add_test(tc_basic_lib, DummyTest_BasicLib);
     suite_add_tcase(s, tc_dummy);
+    suite_add_tcase(s, tc_basic_lib);
     return s;
 }
 
