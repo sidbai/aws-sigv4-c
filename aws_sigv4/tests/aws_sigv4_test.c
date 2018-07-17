@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <check.h>
+#include "aws_sigv4.h"
 
 START_TEST (DummyTest_Dummy)
 {
@@ -10,7 +11,7 @@ END_TEST
 
 START_TEST (DummyTest_BasicLib)
 {
-    ck_assert_int_eq(0, test());
+    ck_assert_int_eq(0, aws_sigv4_sign(NULL, NULL));
 }
 END_TEST
 
