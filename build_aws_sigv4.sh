@@ -30,7 +30,7 @@ build_aws_sigv4() {
     pushd build
     cmake ../aws_sigv4
     make
-    make test
+    CTEST_OUTPUT_ON_FAILURE=1 make test
     popd
 }
 
