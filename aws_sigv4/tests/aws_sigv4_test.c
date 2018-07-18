@@ -59,6 +59,26 @@ START_TEST (AwsSigv4Test_CredentialScope)
 }
 END_TEST
 
+START_TEST (AwsSigv4Test_SignedHeaders)
+{
+    char signed_headers_data[128];
+    aws_sigv4_str_t signed_headers = { .data = signed_headers_data, .len = 0 };
+    aws_sigv4_params_t sigv4_params;
+
+    /* invalid input */
+    int rc = get_signed_headers(NULL, &signed_headers);
+    ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
+
+    /* happy case */
+    rc = get_signed_headers(&sigv4_params, &signed_headers);
+    const char* expected_signed_headers = "host;x-amz-date";
+    int expected_len = strlen(expected_signed_headers);
+    ck_assert_int_eq(rc, AWS_SIGV4_OK);
+    ck_assert_mem_eq(signed_headers.data, expected_signed_headers, expected_len);
+    ck_assert_int_eq(signed_headers.len, expected_len);
+}
+END_TEST
+
 Suite * aws_sigv4_test_suite(void)
 {
     Suite *s;
@@ -66,8 +86,10 @@ Suite * aws_sigv4_test_suite(void)
 
     TCase *tc_dummy             = tcase_create("AwsSigv4Test_Dummy");
     TCase *tc_credential_scope  = tcase_create("AwsSigv4Test_CredentialScope");
+    TCase *tc_signed_headers    = tcase_create("AwsSigv4Test_SignedHeaders");
     tcase_add_test(tc_dummy, AwsSigv4Test_CredentialScope);
     tcase_add_test(tc_credential_scope, AwsSigv4Test_CredentialScope);
+    tcase_add_test(tc_credential_scope, AwsSigv4Test_SignedHeaders);
     suite_add_tcase(s, tc_dummy);
     suite_add_tcase(s, tc_credential_scope);
     return s;

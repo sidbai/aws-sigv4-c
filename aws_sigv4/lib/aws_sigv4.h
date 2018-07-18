@@ -1,5 +1,5 @@
-#ifndef AWS_SIGV4_H
-#define AWS_SIGV4_H
+#ifndef __AWS_SIGV4_H
+#define __AWS_SIGV4_H
 
 #define AWS_SIGV4_SIGNING_ALGORITHM     "AWS4-HMAC-SHA256"
 #define AWS_SIGV4_AUTH_HEADER_MAX_LEN   4096
@@ -57,4 +57,4 @@ int get_signed_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signed
  */
 int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* auth_header);
 
-#endif // AWS_SIGV4_H
+#endif /* __AWS_SIGV4_H */

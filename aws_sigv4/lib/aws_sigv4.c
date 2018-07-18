@@ -47,6 +47,24 @@ finished:
     return rc;
 }
 
+int get_signed_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signed_headers)
+{
+    int rc = AWS_SIGV4_OK;
+    if (signed_headers == NULL
+        || signed_headers->data == NULL
+        || sigv4_params == NULL)
+    {
+        rc = AWS_SIGV4_INVALID_INPUT_ERROR;
+        goto finished;
+    }
+    const char* str = "host;x-amz-date";
+    size_t str_len = strlen(str);
+    strncpy(signed_headers->data, str, str_len);
+    signed_headers->len = str_len;
+finished:
+    return rc;
+}
+
 int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* auth_header)
 {
     if (auth_header == NULL)
@@ -69,10 +87,5 @@ err:
         free(auth_header->data);
         auth_header->data = NULL;
     }
-    return 0;
-}
-
-int test()
-{
     return 0;
 }
