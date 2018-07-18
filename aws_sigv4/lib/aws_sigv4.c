@@ -52,7 +52,9 @@ int get_signed_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signed
     int rc = AWS_SIGV4_OK;
     if (signed_headers == NULL
         || signed_headers->data == NULL
-        || sigv4_params == NULL)
+        || sigv4_params == NULL
+        || empty_str(sigv4_params->host)
+        || empty_str(sigv4_params->x_amz_date))
     {
         rc = AWS_SIGV4_INVALID_INPUT_ERROR;
         goto finished;
@@ -61,6 +63,39 @@ int get_signed_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signed
     size_t str_len = strlen(str);
     strncpy(signed_headers->data, str, str_len);
     signed_headers->len = str_len;
+finished:
+    return rc;
+}
+
+int get_canonical_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* canonical_headers)
+{
+    int rc = AWS_SIGV4_OK;
+    if (canonical_headers == NULL
+        || canonical_headers->data == NULL
+        || sigv4_params == NULL
+        || empty_str(sigv4_params->host)
+        || empty_str(sigv4_params->x_amz_date))
+    {
+        rc = AWS_SIGV4_INVALID_INPUT_ERROR;
+        goto finished;
+    }
+    char* str = canonical_headers->data;
+    strncpy(str, "host:", 5);
+    str += 5;
+    /* TODO: Add logic to remove leading and trailing spaces for header values*/
+    strncpy(str, sigv4_params->host.data, sigv4_params->host.len);
+    str += sigv4_params->host.len;
+    *str = '\n';
+    str++;
+
+    strncpy(str, "x-amz-date:", 11);
+    str += 11;
+    strncpy(str, sigv4_params->x_amz_date.data, sigv4_params->x_amz_date.len);
+    str += sigv4_params->x_amz_date.len;
+    *str = '\n';
+    str++;
+
+    canonical_headers->len = str - canonical_headers->data;
 finished:
     return rc;
 }

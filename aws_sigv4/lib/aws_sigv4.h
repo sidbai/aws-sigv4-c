@@ -49,6 +49,14 @@ int get_credential_scope(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* cred
  */
 int get_signed_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signed_headers);
 
+/** @brief get canonical headers string
+ *
+ * @param[in] sigv4_params A pointer to a struct of sigv4 parameters
+ * @param[out] canonical_headers A struct of buffer to store canonical headers string
+ * @return Status code where zero for success and non-zero for failure
+ */
+int get_canonical_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* canonical_headers);
+
 /** @brief perform sigv4 signing
  *
  * @param[in] sigv4_params A pointer to a struct of sigv4 parameters

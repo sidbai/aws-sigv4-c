@@ -63,10 +63,22 @@ START_TEST (AwsSigv4Test_SignedHeaders)
 {
     char signed_headers_data[128];
     aws_sigv4_str_t signed_headers = { .data = signed_headers_data, .len = 0 };
-    aws_sigv4_params_t sigv4_params;
+    aws_sigv4_params_t sigv4_params = { .host       = construct_str(NULL),
+                                        .x_amz_date = construct_str(NULL) };
 
     /* invalid input */
     int rc = get_signed_headers(NULL, &signed_headers);
+    ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
+
+    rc = get_signed_headers(&sigv4_params, &signed_headers);
+    ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
+
+    sigv4_params.host = construct_str("abc.com");
+    rc = get_signed_headers(&sigv4_params, &signed_headers);
+    ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
+
+    sigv4_params.x_amz_date = construct_str("20180717T074800Z");
+    rc = get_signed_headers(&sigv4_params, NULL);
     ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
 
     /* happy case */
@@ -79,6 +91,38 @@ START_TEST (AwsSigv4Test_SignedHeaders)
 }
 END_TEST
 
+START_TEST (AwsSigv4Test_CanonicalHeaders)
+{
+    char canonical_headers_data[256];
+    aws_sigv4_str_t canonical_headers = { .data = canonical_headers_data, .len = 0 };
+    aws_sigv4_params_t sigv4_params = { .host       = construct_str(NULL),
+                                        .x_amz_date = construct_str(NULL) };
+
+    /* invalid input */
+    int rc = get_canonical_headers(NULL, &canonical_headers);
+    ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
+
+    rc = get_canonical_headers(&sigv4_params, &canonical_headers);
+    ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
+
+    sigv4_params.host = construct_str("abc.com");
+    rc = get_canonical_headers(&sigv4_params, &canonical_headers);
+    ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
+
+    sigv4_params.x_amz_date = construct_str("20180717T074800Z");
+    rc = get_canonical_headers(&sigv4_params, NULL);
+    ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
+
+    /* happy case */
+    rc = get_canonical_headers(&sigv4_params, &canonical_headers);
+    const char* expected_canonical_headers = "host:abc.com\nx-amz-date:20180717T074800Z\n";
+    int expected_len = strlen(expected_canonical_headers);
+    ck_assert_int_eq(rc, AWS_SIGV4_OK);
+    ck_assert_mem_eq(canonical_headers.data, expected_canonical_headers, expected_len);
+    ck_assert_int_eq(canonical_headers.len, expected_len);
+}
+END_TEST
+
 Suite * aws_sigv4_test_suite(void)
 {
     Suite *s;
@@ -87,11 +131,15 @@ Suite * aws_sigv4_test_suite(void)
     TCase *tc_dummy             = tcase_create("AwsSigv4Test_Dummy");
     TCase *tc_credential_scope  = tcase_create("AwsSigv4Test_CredentialScope");
     TCase *tc_signed_headers    = tcase_create("AwsSigv4Test_SignedHeaders");
+    TCase *tc_canonical_headers = tcase_create("AwsSigv4Test_CanonicalHeaders");
     tcase_add_test(tc_dummy, AwsSigv4Test_CredentialScope);
     tcase_add_test(tc_credential_scope, AwsSigv4Test_CredentialScope);
-    tcase_add_test(tc_credential_scope, AwsSigv4Test_SignedHeaders);
+    tcase_add_test(tc_signed_headers, AwsSigv4Test_SignedHeaders);
+    tcase_add_test(tc_canonical_headers, AwsSigv4Test_CanonicalHeaders);
     suite_add_tcase(s, tc_dummy);
     suite_add_tcase(s, tc_credential_scope);
+    suite_add_tcase(s, tc_signed_headers);
+    suite_add_tcase(s, tc_canonical_headers);
     return s;
 }
 
