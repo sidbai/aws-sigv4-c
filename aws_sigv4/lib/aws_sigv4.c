@@ -4,44 +4,50 @@
 #include <openssl/hmac.h>
 #include "aws_sigv4.h"
 
-int get_credential_scope(aws_sigv4_params_t* sigv4_params, char* credential_scope)
+static inline int empty_str(aws_sigv4_str_t str)
 {
-    if (credential_scope == NULL
-        || sigv4_params == NULL
-        || sigv4_params->x_amz_date == NULL
-        || sigv4_params->region == NULL
-        || sigv4_params->service == NULL)
-    {
-        goto err;
-    }
-    char* curr = credential_scope;
-    /* get date in yyyymmdd format */
-    strncpy(curr, sigv4_params->x_amz_date, 8);
-    curr += 8;
-    *curr = '/';
-    curr++;
-
-    size_t region_len = strlen(sigv4_params->region);
-    strncpy(curr, sigv4_params->region, region_len);
-    curr += region_len;
-    *curr = '/';
-    curr++;
-
-    size_t service_len = strlen(sigv4_params->service);
-    strncpy(curr, sigv4_params->service, service_len);
-    curr += service_len;
-    *curr = '/';
-    curr++;
-
-    strncpy(curr, "aws4_request", 12);
-    curr += 12;
-
-    return curr - credential_scope;
-err:
-    return 0;
+    return (str.data == NULL || str.len == 0) ? 1 : 0;
 }
 
-int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, char** auth_header)
+int get_credential_scope(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* credential_scope)
+{
+    int rc = AWS_SIGV4_OK;
+    if (credential_scope == NULL
+        || credential_scope->data == NULL
+        || sigv4_params == NULL
+        || empty_str(sigv4_params->x_amz_date)
+        || empty_str(sigv4_params->region)
+        || empty_str(sigv4_params->service))
+    {
+        rc = AWS_SIGV4_INVALID_INPUT_ERROR;
+        goto finished;
+    }
+    char* str = credential_scope->data;
+    /* get date in yyyymmdd format */
+    strncpy(str, sigv4_params->x_amz_date.data, 8);
+    str += 8;
+    *str = '/';
+    str++;
+
+    strncpy(str, sigv4_params->region.data, sigv4_params->region.len);
+    str += sigv4_params->region.len;
+    *str = '/';
+    str++;
+
+    strncpy(str, sigv4_params->service.data, sigv4_params->service.len);
+    str += sigv4_params->service.len;
+    *str = '/';
+    str++;
+
+    strncpy(str, "aws4_request", 12);
+    str += 12;
+
+    credential_scope->len = str - credential_scope->data;
+finished:
+    return rc;
+}
+
+int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* auth_header)
 {
     if (auth_header == NULL)
     {
@@ -49,8 +55,8 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, char** auth_header)
     }
 
     /* TODO: Support custom memory allocator */
-    *auth_header = malloc(AWS_SIGV4_AUTH_HEADER_MAX_LEN);
-    if (*auth_header == NULL)
+    auth_header->data = malloc(AWS_SIGV4_AUTH_HEADER_MAX_LEN);
+    if (auth_header->data == NULL)
     {
         goto err;
     }
@@ -58,10 +64,10 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, char** auth_header)
     return len;
 err:
     /* deallocate memory in case of failure */
-    if (auth_header && *auth_header)
+    if (auth_header && auth_header->data)
     {
-        free(*auth_header);
-        *auth_header = NULL;
+        free(auth_header->data);
+        auth_header->data = NULL;
     }
     return 0;
 }
