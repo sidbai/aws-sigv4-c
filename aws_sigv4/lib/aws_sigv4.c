@@ -47,18 +47,15 @@ int get_credential_scope(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* cred
     /* get date in yyyymmdd format */
     strncpy(str, sigv4_params->x_amz_date.data, 8);
     str += 8;
-    *str = '/';
-    str++;
+    *(str++) = '/';
 
     strncpy(str, sigv4_params->region.data, sigv4_params->region.len);
     str += sigv4_params->region.len;
-    *str = '/';
-    str++;
+    *(str++) = '/';
 
     strncpy(str, sigv4_params->service.data, sigv4_params->service.len);
     str += sigv4_params->service.len;
-    *str = '/';
-    str++;
+    *(str++) = '/';
 
     strncpy(str, "aws4_request", 12);
     str += 12;
@@ -106,15 +103,13 @@ int get_canonical_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* can
     /* TODO: Add logic to remove leading and trailing spaces for header values */
     strncpy(str, sigv4_params->host.data, sigv4_params->host.len);
     str += sigv4_params->host.len;
-    *str = '\n';
-    str++;
+    *(str++) = '\n';
 
     strncpy(str, "x-amz-date:", 11);
     str += 11;
     strncpy(str, sigv4_params->x_amz_date.data, sigv4_params->x_amz_date.len);
     str += sigv4_params->x_amz_date.len;
-    *str = '\n';
-    str++;
+    *(str++) = '\n';
 
     canonical_headers->len = str - canonical_headers->data;
 finished:
@@ -137,20 +132,17 @@ int get_canonical_request(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* can
     char* str = canonical_request->data;
     strncpy(str, sigv4_params->method.data, sigv4_params->method.len);
     str += sigv4_params->method.len;
-    *str = '\n';
-    str++;
+    *(str++) = '\n';
 
     /* TODO: Here we assume the URI has already been encoded. Add encoding logic in future. */
     strncpy(str, sigv4_params->uri.data, sigv4_params->uri.len);
     str += sigv4_params->uri.len;
-    *str = '\n';
-    str++;
+    *(str++) = '\n';
 
     /* TODO: Here we assume the query string has already been encoded. Add encoding logic in future. */
     strncpy(str, sigv4_params->query_str.data, sigv4_params->query_str.len);
     str += sigv4_params->query_str.len;
-    *str = '\n';
-    str++;
+    *(str++) = '\n';
 
     aws_sigv4_str_t canonical_headers = { .data = str, .len = 0 };
     rc = get_canonical_headers(sigv4_params, &canonical_headers);
@@ -159,8 +151,7 @@ int get_canonical_request(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* can
         goto finished;
     }
     str += canonical_headers.len;
-    *str = '\n';
-    str++;
+    *(str++) = '\n';
 
     aws_sigv4_str_t signed_headers = { .data = str, .len = 0 };
     rc = get_signed_headers(sigv4_params, &signed_headers);
@@ -169,8 +160,7 @@ int get_canonical_request(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* can
         goto finished;
     }
     str += signed_headers.len;
-    *str = '\n';
-    str++;
+    *(str++) = '\n';
 
     rc = get_hex_sha256(&sigv4_params->payload, str);
     if (rc != AWS_SIGV4_OK)
