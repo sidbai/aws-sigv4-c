@@ -121,6 +121,69 @@ finished:
     return rc;
 }
 
+int get_canonical_request(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* canonical_request)
+{
+    int rc = AWS_SIGV4_OK;
+    if (canonical_request == NULL
+        || canonical_request->data == NULL
+        || sigv4_params == NULL
+        || empty_str(sigv4_params->method)
+        || empty_str(sigv4_params->uri)
+        || empty_str(sigv4_params->query_str))
+    {
+        rc = AWS_SIGV4_INVALID_INPUT_ERROR;
+        goto finished;
+    }
+    char* str = canonical_request->data;
+    strncpy(str, sigv4_params->method.data, sigv4_params->method.len);
+    str += sigv4_params->method.len;
+    *str = '\n';
+    str++;
+
+    /* TODO: Here we assume the URI has already been encoded. Add encoding logic in future. */
+    strncpy(str, sigv4_params->uri.data, sigv4_params->uri.len);
+    str += sigv4_params->uri.len;
+    *str = '\n';
+    str++;
+
+    /* TODO: Here we assume the query string has already been encoded. Add encoding logic in future. */
+    strncpy(str, sigv4_params->query_str.data, sigv4_params->query_str.len);
+    str += sigv4_params->query_str.len;
+    *str = '\n';
+    str++;
+
+    aws_sigv4_str_t canonical_headers = { .data = str, .len = 0 };
+    rc = get_canonical_headers(sigv4_params, &canonical_headers);
+    if (rc != AWS_SIGV4_OK)
+    {
+        goto finished;
+    }
+    str += canonical_headers.len;
+    *str = '\n';
+    str++;
+
+    aws_sigv4_str_t signed_headers = { .data = str, .len = 0 };
+    rc = get_signed_headers(sigv4_params, &signed_headers);
+    if (rc != AWS_SIGV4_OK)
+    {
+        goto finished;
+    }
+    str += signed_headers.len;
+    *str = '\n';
+    str++;
+
+    rc = get_hex_sha256(&sigv4_params->payload, str);
+    if (rc != AWS_SIGV4_OK)
+    {
+        goto finished;
+    }
+    str += AWS_SIGV4_HEX_SHA256_LENGTH;
+
+    canonical_request->len = str - canonical_request->data;
+finished:
+    return rc;
+}
+
 int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* auth_header)
 {
     if (auth_header == NULL)

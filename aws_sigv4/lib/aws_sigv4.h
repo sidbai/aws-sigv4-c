@@ -70,6 +70,14 @@ int get_signed_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signed
  */
 int get_canonical_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* canonical_headers);
 
+/** @brief get canonical request string
+ *
+ * @param[in] sigv4_params A pointer to a struct of sigv4 parameters
+ * @param[out] canonical_request A struct of buffer to store canonical request string
+ * @return Status code where zero for success and non-zero for failure
+ */
+int get_canonical_request(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* canonical_request);
+
 /** @brief perform sigv4 signing
  *
  * @param[in] sigv4_params A pointer to a struct of sigv4 parameters
