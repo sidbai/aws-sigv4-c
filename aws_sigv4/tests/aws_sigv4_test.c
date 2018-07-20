@@ -20,6 +20,17 @@ START_TEST (AwsSigv4Test_Dummy)
 }
 END_TEST
 
+START_TEST (AwsSigv4Test_HexSHA256)
+{
+    const char* empty_str_sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    char hex_sha256[AWS_SIGV4_HEX_SHA256_LENGTH];
+    aws_sigv4_str_t str_in = construct_str(NULL);
+    int rc = get_hex_sha256(&str_in, hex_sha256);
+    ck_assert_int_eq(rc, AWS_SIGV4_OK);
+    ck_assert_mem_eq(hex_sha256, empty_str_sha256, AWS_SIGV4_HEX_SHA256_LENGTH);
+}
+END_TEST
+
 START_TEST (AwsSigv4Test_CredentialScope)
 {
     char credential_scope_data[1024] = { 0 };
@@ -129,14 +140,17 @@ Suite * aws_sigv4_test_suite(void)
     s = suite_create("AwsSigv4Test");
 
     TCase *tc_dummy             = tcase_create("AwsSigv4Test_Dummy");
+    TCase *tc_hex_sha256        = tcase_create("AwsSigv4Test_HexSHA256");
     TCase *tc_credential_scope  = tcase_create("AwsSigv4Test_CredentialScope");
     TCase *tc_signed_headers    = tcase_create("AwsSigv4Test_SignedHeaders");
     TCase *tc_canonical_headers = tcase_create("AwsSigv4Test_CanonicalHeaders");
-    tcase_add_test(tc_dummy, AwsSigv4Test_CredentialScope);
+    tcase_add_test(tc_dummy, AwsSigv4Test_Dummy);
+    tcase_add_test(tc_hex_sha256, AwsSigv4Test_HexSHA256);
     tcase_add_test(tc_credential_scope, AwsSigv4Test_CredentialScope);
     tcase_add_test(tc_signed_headers, AwsSigv4Test_SignedHeaders);
     tcase_add_test(tc_canonical_headers, AwsSigv4Test_CanonicalHeaders);
     suite_add_tcase(s, tc_dummy);
+    suite_add_tcase(s, tc_hex_sha256);
     suite_add_tcase(s, tc_credential_scope);
     suite_add_tcase(s, tc_signed_headers);
     suite_add_tcase(s, tc_canonical_headers);

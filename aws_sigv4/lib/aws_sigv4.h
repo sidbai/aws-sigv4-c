@@ -1,12 +1,17 @@
 #ifndef __AWS_SIGV4_H
 #define __AWS_SIGV4_H
 
+#include <openssl/sha.h>
+
 #define AWS_SIGV4_SIGNING_ALGORITHM     "AWS4-HMAC-SHA256"
 #define AWS_SIGV4_AUTH_HEADER_MAX_LEN   4096
+
+#define AWS_SIGV4_HEX_SHA256_LENGTH SHA256_DIGEST_LENGTH * 2
 
 #define AWS_SIGV4_MEMORY_ALLOCATION_ERROR  -2
 #define AWS_SIGV4_INVALID_INPUT_ERROR      -1
 #define AWS_SIGV4_OK                        0
+
 
 typedef struct aws_sigv4_str_s {
     char* data;
@@ -32,6 +37,14 @@ typedef struct aws_sigv4_params_s {
     aws_sigv4_str_t region;
 } aws_sigv4_params_t;
 
+
+/** @brief get hex encoded sha256 of a given string
+ *
+ * @param[in] str_in Input string
+ * @param[out] hex_sha256_out Output buffer to store hex encoded sha256 string
+ * @return Status code where zero for success and non-zero for failure
+ */
+int get_hex_sha256(aws_sigv4_str_t* str_in, char hex_sha256_out[AWS_SIGV4_HEX_SHA256_LENGTH]);
 
 /** @brief get credential scope string
  *

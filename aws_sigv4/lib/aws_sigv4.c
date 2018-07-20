@@ -1,12 +1,33 @@
 #include <stdio.h>
 #include <string.h>
-#include <openssl/sha.h>
 #include <openssl/hmac.h>
 #include "aws_sigv4.h"
 
 static inline int empty_str(aws_sigv4_str_t str)
 {
     return (str.data == NULL || str.len == 0) ? 1 : 0;
+}
+
+int get_hex_sha256(aws_sigv4_str_t* str_in, char hex_sha256_out[AWS_SIGV4_HEX_SHA256_LENGTH])
+{
+    if (str_in == NULL)
+    {
+        return AWS_SIGV4_INVALID_INPUT_ERROR;
+    }
+    unsigned char sha256_buf[SHA256_DIGEST_LENGTH];
+    SHA256_CTX ctx;
+    SHA256_Init(&ctx);
+    SHA256_Update(&ctx, str_in->data, str_in->len);
+    SHA256_Final(sha256_buf, &ctx);
+
+    static const char digits[] = "0123456789abcdef";
+    char* c_ptr = hex_sha256_out;
+    for (size_t i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    {
+        *(c_ptr++) = digits[(sha256_buf[i] & 0xf0) >> 4];
+        *(c_ptr++) = digits[sha256_buf[i] & 0x0f];
+    }
+    return AWS_SIGV4_OK;
 }
 
 int get_credential_scope(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* credential_scope)
@@ -82,7 +103,7 @@ int get_canonical_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* can
     char* str = canonical_headers->data;
     strncpy(str, "host:", 5);
     str += 5;
-    /* TODO: Add logic to remove leading and trailing spaces for header values*/
+    /* TODO: Add logic to remove leading and trailing spaces for header values */
     strncpy(str, sigv4_params->host.data, sigv4_params->host.len);
     str += sigv4_params->host.len;
     *str = '\n';
