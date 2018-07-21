@@ -78,6 +78,17 @@ int get_canonical_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* can
  */
 int get_canonical_request(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* canonical_request);
 
+/** @brief get string to sign
+ *
+ * @param[in] request_date A pointer to a struct of request date in ISO8601 format
+ * @param[in] credential_scope A pointer to a struct of precomputed credential scope
+ * @param[in] canonical_request A pointer to a struct of precomputed canonical request
+ * @param[out] string_to_sign A struct of buffer to store string to sign
+ * @return Status code where zero for success and non-zero for failure
+ */
+int get_string_to_sign(aws_sigv4_str_t* request_date, aws_sigv4_str_t* credential_scope,
+                       aws_sigv4_str_t* canonical_request, aws_sigv4_str_t* string_to_sign);
+
 /** @brief perform sigv4 signing
  *
  * @param[in] sigv4_params A pointer to a struct of sigv4 parameters

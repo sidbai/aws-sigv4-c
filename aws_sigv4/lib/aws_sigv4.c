@@ -174,6 +174,45 @@ finished:
     return rc;
 }
 
+int get_string_to_sign(aws_sigv4_str_t* request_date, aws_sigv4_str_t* credential_scope,
+                       aws_sigv4_str_t* canonical_request, aws_sigv4_str_t* string_to_sign)
+{
+    int rc = AWS_SIGV4_OK;
+    if (string_to_sign == NULL || string_to_sign->data == NULL
+        || request_date == NULL || empty_str(*request_date)
+        || credential_scope == NULL || empty_str(*credential_scope)
+        || canonical_request == NULL || empty_str(*canonical_request))
+    {
+        rc = AWS_SIGV4_INVALID_INPUT_ERROR;
+        goto finished;
+    }
+
+    char* str = string_to_sign->data;
+    size_t algo_str_len = strlen(AWS_SIGV4_SIGNING_ALGORITHM);
+    strncpy(str, AWS_SIGV4_SIGNING_ALGORITHM, algo_str_len);
+    str += algo_str_len;
+    *(str++) = '\n';
+
+    strncpy(str, request_date->data, request_date->len);
+    str += request_date->len;
+    *(str++) = '\n';
+
+    strncpy(str, credential_scope->data, credential_scope->len);
+    str += credential_scope->len;
+    *(str++) = '\n';
+
+    rc = get_hex_sha256(canonical_request, str);
+    if (rc != AWS_SIGV4_OK)
+    {
+        goto finished;
+    }
+    str += AWS_SIGV4_HEX_SHA256_LENGTH;
+
+    string_to_sign->len = str - string_to_sign->data;
+finished:
+    return rc;
+}
+
 int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* auth_header)
 {
     if (auth_header == NULL)

@@ -171,7 +171,8 @@ START_TEST (AwsSigv4Test_CanonicalRequest)
 /test_uri\n\
 action=test\n\
 host:abc.com\n\
-x-amz-date:20180717T074800Z\n\n\
+x-amz-date:20180717T074800Z\n\
+\n\
 host;x-amz-date\n\
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
     int expected_len = strlen(expected_canonical_request);
@@ -179,6 +180,42 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
     ck_assert_int_eq(canonical_request.len, expected_len);
     ck_assert_pstr_eq(canonical_request.data, expected_canonical_request);
     ck_assert_mem_eq(canonical_request.data, expected_canonical_request, expected_len);
+}
+END_TEST
+
+START_TEST (AwsSigv4Test_StringToSign)
+{
+    /*
+     * Test data is from https://docs.aws.amazon.com/general/latest/gr/sigv4-create-string-to-sign.html
+     */
+    char string_to_sign_data[1024] = { 0 };
+    const char* request_date_data = "20150830T123600Z";
+    const char* credential_scope_data = "20150830/us-east-1/iam/aws4_request";
+    const char* canonical_request_data = \
+"GET\n\
+/\n\
+Action=ListUsers&Version=2010-05-08\n\
+content-type:application/x-www-form-urlencoded; charset=utf-8\n\
+host:iam.amazonaws.com\n\
+x-amz-date:20150830T123600Z\n\
+\n\
+content-type;host;x-amz-date\n\
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    aws_sigv4_str_t request_date      = construct_str(request_date_data);
+    aws_sigv4_str_t credential_scope  = construct_str(credential_scope_data);
+    aws_sigv4_str_t canonical_request = construct_str(canonical_request_data);
+    aws_sigv4_str_t string_to_sign    = { .data = string_to_sign_data, .len = 0 };
+    int rc = get_string_to_sign(&request_date, &credential_scope, &canonical_request, &string_to_sign);
+    const char* expected_string_to_sign = \
+"AWS4-HMAC-SHA256\n\
+20150830T123600Z\n\
+20150830/us-east-1/iam/aws4_request\n\
+f536975d06c0309214f805bb90ccff089219ecd68b2577efef23edd43b7e1a59";
+    int expected_len = strlen(expected_string_to_sign);
+    ck_assert_int_eq(rc, AWS_SIGV4_OK);
+    ck_assert_int_eq(string_to_sign.len, expected_len);
+    ck_assert_pstr_eq(string_to_sign.data, expected_string_to_sign);
+    ck_assert_mem_eq(string_to_sign.data, expected_string_to_sign, expected_len);
 }
 END_TEST
 
@@ -193,18 +230,21 @@ Suite * aws_sigv4_test_suite(void)
     TCase *tc_signed_headers    = tcase_create("AwsSigv4Test_SignedHeaders");
     TCase *tc_canonical_headers = tcase_create("AwsSigv4Test_CanonicalHeaders");
     TCase *tc_canonical_request = tcase_create("AwsSigv4Test_CanonicalRequest");
+    TCase *tc_string_to_sign    = tcase_create("AwsSigv4Test_StringToSign");
     tcase_add_test(tc_dummy, AwsSigv4Test_Dummy);
     tcase_add_test(tc_hex_sha256, AwsSigv4Test_HexSHA256);
     tcase_add_test(tc_credential_scope, AwsSigv4Test_CredentialScope);
     tcase_add_test(tc_signed_headers, AwsSigv4Test_SignedHeaders);
     tcase_add_test(tc_canonical_headers, AwsSigv4Test_CanonicalHeaders);
     tcase_add_test(tc_canonical_request, AwsSigv4Test_CanonicalRequest);
+    tcase_add_test(tc_string_to_sign, AwsSigv4Test_StringToSign);
     suite_add_tcase(s, tc_dummy);
     suite_add_tcase(s, tc_hex_sha256);
     suite_add_tcase(s, tc_credential_scope);
     suite_add_tcase(s, tc_signed_headers);
     suite_add_tcase(s, tc_canonical_headers);
     suite_add_tcase(s, tc_canonical_request);
+    suite_add_tcase(s, tc_string_to_sign);
     return s;
 }
 
