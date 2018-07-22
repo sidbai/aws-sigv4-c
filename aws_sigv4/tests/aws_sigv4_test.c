@@ -14,17 +14,6 @@ static inline aws_sigv4_str_t construct_str(const unsigned char* cstr)
   return ret;
 }
 
-static inline aws_sigv4_str_t construct_ustr(const unsigned char* cstr)
-{
-  aws_sigv4_str_t ret = { .data = NULL, .len = 0 };
-  if (cstr)
-  {
-    ret.data = (unsigned char*) cstr;
-    ret.len  = strlen(cstr);
-  }
-  return ret;
-}
-
 START_TEST (AwsSigv4Test_Dummy)
 {
   ck_assert_int_eq(0, 0);
@@ -36,20 +25,23 @@ START_TEST (AwsSigv4Test_HEX)
   /*
    * test data is from https://tools.ietf.org/html/rfc4231
    */
-  const char* expected_output_str1  = "4a656665";
-  const char* expected_output_str2  = "7768617420646f2079612077616e7420666f72206e6f7468696e673f";
+  const unsigned char* expected_output_str1 = "4a656665";
+  const unsigned char* expected_output_str2 = "7768617420646f2079612077616e7420666f72206e6f7468696e673f";
   unsigned char hex_buff[AWS_SIGV4_HEX_SHA256_LENGTH + 1] = { 0 };
 
-  aws_sigv4_str_t str_in_str1  = construct_ustr("Jefe");
-  int rc = get_hexdigest(&str_in_str1, hex_buff);
+  aws_sigv4_str_t str_in_str1 = construct_str("Jefe");
+  aws_sigv4_str_t hex_out     = { .data = hex_buff, .len = 0 };
+  int rc = get_hexdigest(&str_in_str1, &hex_out);
   ck_assert_int_eq(rc, AWS_SIGV4_OK);
   ck_assert_pstr_eq(hex_buff, expected_output_str1);
+  ck_assert_mem_eq(hex_out.data, expected_output_str1, hex_out.len);
 
   memset(hex_buff, 0, AWS_SIGV4_HEX_SHA256_LENGTH + 1);
-  aws_sigv4_str_t str_in_str2  = construct_ustr("what do ya want for nothing?");
-  rc = get_hexdigest(&str_in_str2, hex_buff);
+  aws_sigv4_str_t str_in_str2  = construct_str("what do ya want for nothing?");
+  rc = get_hexdigest(&str_in_str2, &hex_out);
   ck_assert_int_eq(rc, AWS_SIGV4_OK);
   ck_assert_pstr_eq(hex_buff, expected_output_str2);
+  ck_assert_mem_eq(hex_out.data, expected_output_str2, hex_out.len);
 }
 END_TEST
 
@@ -59,11 +51,13 @@ START_TEST (AwsSigv4Test_HexSHA256)
    * test data is from https://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
    */
   const unsigned char* empty_str_sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-  unsigned char hex_sha256[AWS_SIGV4_HEX_SHA256_LENGTH];
-  aws_sigv4_str_t str_in = construct_str(NULL);
-  int rc = get_hex_sha256(&str_in, hex_sha256);
+  unsigned char hex_sha256[AWS_SIGV4_HEX_SHA256_LENGTH] = { 0 };
+  aws_sigv4_str_t str_in          = construct_str(NULL);
+  aws_sigv4_str_t hex_sha256_out  = { .data = hex_sha256, .len = 0 };
+  int rc = get_hex_sha256(&str_in, &hex_sha256_out);
   ck_assert_int_eq(rc, AWS_SIGV4_OK);
-  ck_assert_mem_eq(hex_sha256, empty_str_sha256, AWS_SIGV4_HEX_SHA256_LENGTH);
+  ck_assert_pstr_eq(hex_sha256, empty_str_sha256);
+  ck_assert_mem_eq(hex_sha256_out.data, empty_str_sha256, hex_sha256_out.len);
 }
 END_TEST
 
@@ -78,17 +72,18 @@ START_TEST (AwsSigv4Test_SigningKey)
                                       .service    = construct_str("iam") };
   unsigned char key_buff[1024] = { 0 };
   unsigned char msg_buff[1024] = { 0 };
-  unsigned char signing_key_buff[AWS_SIGV4_KEY_BUFF_LEN]  = { 0 };
-  unsigned char signing_key_hash[AWS_SIGV4_HEX_SHA256_LENGTH + 1]  = { 0 };
+  unsigned char signing_key_buff[AWS_SIGV4_KEY_BUFF_LEN]                = { 0 };
+  unsigned char signing_key_hash_buff[AWS_SIGV4_HEX_SHA256_LENGTH + 1]  = { 0 };
 
-  aws_sigv4_str_t signing_key = { .data = signing_key_buff, .len = 0 };
+  aws_sigv4_str_t signing_key       = { .data = signing_key_buff, .len = 0 };
+  aws_sigv4_str_t signing_key_hash  = { .data = signing_key_hash_buff, .len = 0 };
   int rc = get_signing_key(&sigv4_params, &signing_key);
   ck_assert_int_eq(rc, AWS_SIGV4_OK);
-  rc = get_hexdigest(&signing_key, signing_key_hash);
+  rc = get_hexdigest(&signing_key, &signing_key_hash);
   ck_assert_int_eq(rc, AWS_SIGV4_OK);
   const unsigned char* expected_signing_key_hash = "c4afb1cc5771d871763a393e44b703571b55cc28424d1a5e86da6ed3c154a4b9";
-  ck_assert_pstr_eq(signing_key_hash, expected_signing_key_hash);
-  ck_assert_mem_eq(signing_key_hash, expected_signing_key_hash, AWS_SIGV4_HEX_SHA256_LENGTH);
+  ck_assert_pstr_eq(signing_key_hash_buff, expected_signing_key_hash);
+  ck_assert_mem_eq(signing_key_hash.data, expected_signing_key_hash, signing_key_hash.len);
 }
 END_TEST
 

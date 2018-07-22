@@ -16,23 +16,26 @@ static inline void cleanup_str(aws_sigv4_str_t* str)
   }
 }
 
-int get_hexdigest(aws_sigv4_str_t* str_in, unsigned char* hex_out)
+int get_hexdigest(aws_sigv4_str_t* str_in, aws_sigv4_str_t* hex_out)
 {
-  if (str_in == NULL || hex_out == NULL)
+  if (str_in == NULL
+      || hex_out == NULL
+      || hex_out->data == NULL)
   {
     return AWS_SIGV4_INVALID_INPUT_ERROR;
   }
   static const unsigned char digits[] = "0123456789abcdef";
-  unsigned char* c_ptr = hex_out;
+  unsigned char* c_ptr = hex_out->data;
   for (size_t i = 0; i < str_in->len; i++)
   {
     *(c_ptr++) = digits[(str_in->data[i] & 0xf0) >> 4];
     *(c_ptr++) = digits[str_in->data[i] & 0x0f];
   }
+  hex_out->len = str_in->len * 2;
   return AWS_SIGV4_OK;
 }
 
-int get_hex_sha256(aws_sigv4_str_t* str_in, unsigned char hex_sha256_out[AWS_SIGV4_HEX_SHA256_LENGTH])
+int get_hex_sha256(aws_sigv4_str_t* str_in, aws_sigv4_str_t* hex_sha256_out)
 {
   if (str_in == NULL)
   {
@@ -51,8 +54,8 @@ int get_hex_sha256(aws_sigv4_str_t* str_in, unsigned char hex_sha256_out[AWS_SIG
 int get_hmac_sha256(aws_sigv4_str_t* key, aws_sigv4_str_t* msg, aws_sigv4_str_t* signed_msg)
 {
   int rc = AWS_SIGV4_OK;
-  if (key == NULL || empty_str((aws_sigv4_str_t*) key)
-      || msg == NULL || empty_str((aws_sigv4_str_t*) msg)
+  if (key == NULL || empty_str(key)
+      || msg == NULL || empty_str(msg)
       || signed_msg == NULL || signed_msg->data == NULL)
   {
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
@@ -88,7 +91,7 @@ int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signing_k
   /* data in YYYYMMDD format */
   strncpy(msg_buff, sigv4_params->x_amz_date.data, 8);
   msg.len = 8;
-  cleanup_str((aws_sigv4_str_t*) signing_key);
+  cleanup_str(signing_key);
   rc = get_hmac_sha256(&key, &msg, signing_key);
   if (rc != AWS_SIGV4_OK)
   {
@@ -98,7 +101,7 @@ int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signing_k
   memset(key_buff, 0, AWS_SIGV4_KEY_BUFF_LEN);
   strncpy(key_buff, signing_key->data, signing_key->len);
   key.len = signing_key->len;
-  cleanup_str((aws_sigv4_str_t*) signing_key);
+  cleanup_str(signing_key);
   memset(msg_buff, 0, AWS_SIGV4_KEY_BUFF_LEN);
   strncpy(msg_buff, sigv4_params->region.data, sigv4_params->region.len);
   msg.len = sigv4_params->region.len;
@@ -111,7 +114,7 @@ int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signing_k
   memset(key_buff, 0, AWS_SIGV4_KEY_BUFF_LEN);
   strncpy(key_buff, signing_key->data, signing_key->len);
   key.len = signing_key->len;
-  cleanup_str((aws_sigv4_str_t*) signing_key);
+  cleanup_str(signing_key);
   memset(msg_buff, 0, AWS_SIGV4_KEY_BUFF_LEN);
   strncpy(msg_buff, sigv4_params->service.data, sigv4_params->service.len);
   msg.len = sigv4_params->service.len;
@@ -124,7 +127,7 @@ int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signing_k
   memset(key_buff, 0, AWS_SIGV4_KEY_BUFF_LEN);
   strncpy(key_buff, signing_key->data, signing_key->len);
   key.len = signing_key->len;
-  cleanup_str((aws_sigv4_str_t*) signing_key);
+  cleanup_str(signing_key);
   memset(msg_buff, 0, AWS_SIGV4_KEY_BUFF_LEN);
   strncpy(msg_buff, "aws4_request", 12);
   msg.len = 12;
@@ -265,12 +268,13 @@ int get_canonical_request(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* can
   str += signed_headers.len;
   *(str++) = '\n';
 
-  rc = get_hex_sha256(&sigv4_params->payload, str);
+  aws_sigv4_str_t hex_sha256 = { .data = str, .len = 0 };
+  rc = get_hex_sha256(&sigv4_params->payload, &hex_sha256);
   if (rc != AWS_SIGV4_OK)
   {
     goto finished;
   }
-  str += AWS_SIGV4_HEX_SHA256_LENGTH;
+  str += hex_sha256.len;
 
   canonical_request->len = str - canonical_request->data;
 finished:
@@ -304,12 +308,13 @@ int get_string_to_sign(aws_sigv4_str_t* request_date, aws_sigv4_str_t* credentia
   str += credential_scope->len;
   *(str++) = '\n';
 
-  rc = get_hex_sha256(canonical_request, str);
+  aws_sigv4_str_t hex_sha256 = { .data = str, .len = 0 };
+  rc = get_hex_sha256(canonical_request, &hex_sha256);
   if (rc != AWS_SIGV4_OK)
   {
     goto finished;
   }
-  str += AWS_SIGV4_HEX_SHA256_LENGTH;
+  str += hex_sha256.len;
 
   string_to_sign->len = str - string_to_sign->data;
 finished:

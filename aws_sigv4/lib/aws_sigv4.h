@@ -46,7 +46,7 @@ typedef struct aws_sigv4_params_s {
  * @param[out] hex_out Output buffer to store hex encoded string
  * @return Status code where zero for success and non-zero for failure
  */
-int get_hexdigest(aws_sigv4_str_t* str_in, unsigned char* hex_out);
+int get_hexdigest(aws_sigv4_str_t* str_in, aws_sigv4_str_t* hex_out);
 
 /** @brief get hex encoded sha256 of a given string
  *
@@ -54,7 +54,7 @@ int get_hexdigest(aws_sigv4_str_t* str_in, unsigned char* hex_out);
  * @param[out] hex_sha256_out Output buffer to store hex encoded sha256 string
  * @return Status code where zero for success and non-zero for failure
  */
-int get_hex_sha256(aws_sigv4_str_t* str_in, unsigned char hex_sha256_out[AWS_SIGV4_HEX_SHA256_LENGTH]);
+int get_hex_sha256(aws_sigv4_str_t* str_in, aws_sigv4_str_t* hex_sha256_out);
 
 /** @brief get HMAC-SHA256 of a given string
  *
