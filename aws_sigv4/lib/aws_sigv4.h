@@ -12,6 +12,11 @@ typedef struct aws_sigv4_str_s {
   unsigned int    len;
 } aws_sigv4_str_t;
 
+typedef struct aws_sigv4_header_s {
+  aws_sigv4_str_t name;
+  aws_sigv4_str_t value;
+} aws_sigv4_header_t;
+
 typedef struct aws_sigv4_params_s {
   /* AWS credential parameters */
   aws_sigv4_str_t secret_access_key;
@@ -111,9 +116,9 @@ int get_string_to_sign(aws_sigv4_str_t* request_date, aws_sigv4_str_t* credentia
 /** @brief perform sigv4 signing
  *
  * @param[in] sigv4_params A pointer to a struct of sigv4 parameters
- * @param[out] auth_header A struct of buffer to store Authorization header string
+ * @param[out] auth_header A struct to store Authorization header string
  * @return Status code where zero for success and non-zero for failure
  */
-int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* auth_header);
+int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_header_t* auth_header);
 
 #endif /* __AWS_SIGV4_H */

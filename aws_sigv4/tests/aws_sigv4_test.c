@@ -283,15 +283,24 @@ START_TEST (AwsSigv4Test_AwsSigv4Sign)
                                         .payload            = construct_str(NULL),
                                         .region             = construct_str("us-east-1"),
                                         .service            = construct_str("service") };
-  aws_sigv4_str_t auth_header = construct_str(NULL);
+  aws_sigv4_header_t auth_header = { .name = construct_str(NULL), .value = construct_str(NULL) };
   int rc = aws_sigv4_sign(&sigv4_params, &auth_header);
-  const unsigned char* expected_auth_header = "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, SignedHeaders=host;x-amz-date, Signature=b97d918cfa904a5beff61c982a1b6f458b799221646efd99d3219ec94cdf2500";
-  int expected_len = strlen(expected_auth_header);
+  const unsigned char* expected_auth_header_name  = "Authorization";
+  const unsigned char* expected_auth_header_value = \
+"AWS4-HMAC-SHA256 \
+Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, \
+SignedHeaders=host;x-amz-date, \
+Signature=b97d918cfa904a5beff61c982a1b6f458b799221646efd99d3219ec94cdf2500";
+  int expected_len = strlen(expected_auth_header_value);
   ck_assert_int_eq(rc, AWS_SIGV4_OK);
 
-  ck_assert_pstr_eq(auth_header.data, expected_auth_header);
-  ck_assert_int_eq(auth_header.len, expected_len);
-  ck_assert_mem_eq(auth_header.data, expected_auth_header, expected_len);
+  ck_assert_pstr_eq(auth_header.name.data, expected_auth_header_name);
+  ck_assert_int_eq(auth_header.name.len, strlen(expected_auth_header_name));
+  ck_assert_mem_eq(auth_header.name.data, expected_auth_header_name, strlen(expected_auth_header_name));
+
+  ck_assert_pstr_eq(auth_header.value.data, expected_auth_header_value);
+  ck_assert_int_eq(auth_header.value.len, expected_len);
+  ck_assert_mem_eq(auth_header.value.data, expected_auth_header_value, expected_len);
 }
 END_TEST
 

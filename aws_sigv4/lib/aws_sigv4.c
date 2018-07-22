@@ -3,7 +3,8 @@
 #include <openssl/hmac.h>
 #include "aws_sigv4.h"
 
-#define AWS_SIGV4_SIGNING_ALGORITHM    "AWS4-HMAC-SHA256"
+#define AWS_SIGV4_AUTH_HEADER_NAME    "Authorization"
+#define AWS_SIGV4_SIGNING_ALGORITHM   "AWS4-HMAC-SHA256"
 #define AWS_SIGV4_HEX_SHA256_LENGTH SHA256_DIGEST_LENGTH * 2
 #define AWS_SIGV4_AUTH_HEADER_MAX_LEN         1024
 #define AWS_SIGV4_CANONICAL_REQUEST_BUFF_LEN  4096
@@ -332,7 +333,7 @@ finished:
   return rc;
 }
 
-int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* auth_header)
+int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_header_t* auth_header)
 {
   int rc = AWS_SIGV4_OK;
   if (sigv4_params == NULL
@@ -343,16 +344,19 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* auth_heade
   }
 
   /* TODO: Support custom memory allocator */
-  auth_header->data = malloc(AWS_SIGV4_AUTH_HEADER_MAX_LEN);
-  if (auth_header->data == NULL)
+  auth_header->value.data = malloc(AWS_SIGV4_AUTH_HEADER_MAX_LEN);
+  if (auth_header->value.data == NULL)
   {
     rc = AWS_SIGV4_MEMORY_ALLOCATION_ERROR;
     goto err;
   }
-  memset(auth_header->data, 0, AWS_SIGV4_AUTH_HEADER_MAX_LEN);
+  memset(auth_header->value.data, 0, AWS_SIGV4_AUTH_HEADER_MAX_LEN);
 
-  unsigned char* str = auth_header->data;
+  auth_header->name.data  = AWS_SIGV4_AUTH_HEADER_NAME;
+  auth_header->name.len   = strlen(AWS_SIGV4_AUTH_HEADER_NAME);
+
   /* AWS4-HMAC-SHA256 */
+  unsigned char* str = auth_header->value.data;
   strncpy(str, AWS_SIGV4_SIGNING_ALGORITHM, 16);
   str += 16;
   *(str++) = ' ';
@@ -434,14 +438,14 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* auth_heade
     goto err;
   }
   str += signature.len;
-  auth_header->len = str - auth_header->data;
+  auth_header->value.len = str - auth_header->value.data;
   return rc;
 err:
   /* deallocate memory in case of failure */
-  if (auth_header && auth_header->data)
+  if (auth_header && auth_header->value.data)
   {
-    free(auth_header->data);
-    auth_header->data = NULL;
+    free(auth_header->value.data);
+    auth_header->value.data = NULL;
   }
   return rc;
 }
