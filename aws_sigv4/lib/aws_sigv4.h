@@ -2,9 +2,11 @@
 #define __AWS_SIGV4_H
 
 #include <openssl/sha.h>
+#include <openssl/hmac.h>
 
-#define AWS_SIGV4_SIGNING_ALGORITHM     "AWS4-HMAC-SHA256"
-#define AWS_SIGV4_AUTH_HEADER_MAX_LEN   4096
+#define AWS_SIGV4_SIGNING_ALGORITHM    "AWS4-HMAC-SHA256"
+#define AWS_SIGV4_AUTH_HEADER_MAX_LEN  4096
+#define AWS_SIGV4_KEY_BUFF_LEN         256
 
 #define AWS_SIGV4_HEX_SHA256_LENGTH SHA256_DIGEST_LENGTH * 2
 
@@ -14,29 +16,42 @@
 
 
 typedef struct aws_sigv4_str_s {
-    char* data;
-    size_t len;
+  char*         data;
+  unsigned int  len;
 } aws_sigv4_str_t;
 
+typedef struct aws_sigv4_ustr_s {
+  unsigned char*  data;
+  unsigned int    len;
+} aws_sigv4_ustr_t;
+
 typedef struct aws_sigv4_params_s {
-    /* AWS credential parameters */
-    aws_sigv4_str_t secret_access_key;
-    aws_sigv4_str_t access_key_id;
+  /* AWS credential parameters */
+  aws_sigv4_str_t secret_access_key;
+  aws_sigv4_str_t access_key_id;
 
-    /* HTTP request parameters */
-    aws_sigv4_str_t method;
-    aws_sigv4_str_t uri;
-    aws_sigv4_str_t query_str;
-    aws_sigv4_str_t host;
-    /* x-amz-date header value in ISO8601 format */
-    aws_sigv4_str_t x_amz_date;
-    aws_sigv4_str_t payload;
+  /* HTTP request parameters */
+  aws_sigv4_str_t method;
+  aws_sigv4_str_t uri;
+  aws_sigv4_str_t query_str;
+  aws_sigv4_str_t host;
+  /* x-amz-date header value in ISO8601 format */
+  aws_sigv4_str_t x_amz_date;
+  aws_sigv4_str_t payload;
 
-    /* AWS service parameters */
-    aws_sigv4_str_t service;
-    aws_sigv4_str_t region;
+  /* AWS service parameters */
+  aws_sigv4_str_t service;
+  aws_sigv4_str_t region;
 } aws_sigv4_params_t;
 
+
+/** @brief get hex encoding of a given string
+ *
+ * @param[in] str_in Input string
+ * @param[out] hex_out Output buffer to store hex encoded string
+ * @return Status code where zero for success and non-zero for failure
+ */
+int get_hexdigest(aws_sigv4_ustr_t* str_in, char* hex_out);
 
 /** @brief get hex encoded sha256 of a given string
  *
@@ -45,6 +60,23 @@ typedef struct aws_sigv4_params_s {
  * @return Status code where zero for success and non-zero for failure
  */
 int get_hex_sha256(aws_sigv4_str_t* str_in, char hex_sha256_out[AWS_SIGV4_HEX_SHA256_LENGTH]);
+
+/** @brief get hmac of a given string
+ *
+ * @param[in] key Input key string
+ * @param[in] msg Input message string to sign
+ * @param[out] signed_msg Output buffer to signed message. Note the output is unsigned char string.
+ * @return Status code where zero for success and non-zero for failure
+ */
+int get_hmac(aws_sigv4_ustr_t* key, aws_sigv4_ustr_t* msg, aws_sigv4_ustr_t* signed_msg);
+
+/** @brief derive signing key
+ *
+ * @param[in] sigv4_params A pointer to a struct of sigv4 parameters
+ * @param[out] signing_key A struct of buffer to store derived signing key
+ * @return Status code where zero for success and non-zero for failure
+ */
+int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_ustr_t* signing_key);
 
 /** @brief get credential scope string
  *
