@@ -5,7 +5,7 @@
 #include <openssl/hmac.h>
 
 #define AWS_SIGV4_SIGNING_ALGORITHM    "AWS4-HMAC-SHA256"
-#define AWS_SIGV4_AUTH_HEADER_MAX_LEN  4096
+#define AWS_SIGV4_AUTH_HEADER_MAX_LEN  1024
 #define AWS_SIGV4_KEY_BUFF_LEN         256
 
 #define AWS_SIGV4_HEX_SHA256_LENGTH SHA256_DIGEST_LENGTH * 2
@@ -16,14 +16,9 @@
 
 
 typedef struct aws_sigv4_str_s {
-  char*         data;
-  unsigned int  len;
-} aws_sigv4_str_t;
-
-typedef struct aws_sigv4_ustr_s {
   unsigned char*  data;
   unsigned int    len;
-} aws_sigv4_ustr_t;
+} aws_sigv4_str_t;
 
 typedef struct aws_sigv4_params_s {
   /* AWS credential parameters */
@@ -51,7 +46,7 @@ typedef struct aws_sigv4_params_s {
  * @param[out] hex_out Output buffer to store hex encoded string
  * @return Status code where zero for success and non-zero for failure
  */
-int get_hexdigest(aws_sigv4_ustr_t* str_in, char* hex_out);
+int get_hexdigest(aws_sigv4_str_t* str_in, unsigned char* hex_out);
 
 /** @brief get hex encoded sha256 of a given string
  *
@@ -59,16 +54,16 @@ int get_hexdigest(aws_sigv4_ustr_t* str_in, char* hex_out);
  * @param[out] hex_sha256_out Output buffer to store hex encoded sha256 string
  * @return Status code where zero for success and non-zero for failure
  */
-int get_hex_sha256(aws_sigv4_str_t* str_in, char hex_sha256_out[AWS_SIGV4_HEX_SHA256_LENGTH]);
+int get_hex_sha256(aws_sigv4_str_t* str_in, unsigned char hex_sha256_out[AWS_SIGV4_HEX_SHA256_LENGTH]);
 
-/** @brief get hmac of a given string
+/** @brief get HMAC-SHA256 of a given string
  *
  * @param[in] key Input key string
  * @param[in] msg Input message string to sign
  * @param[out] signed_msg Output buffer to signed message. Note the output is unsigned char string.
  * @return Status code where zero for success and non-zero for failure
  */
-int get_hmac(aws_sigv4_ustr_t* key, aws_sigv4_ustr_t* msg, aws_sigv4_ustr_t* signed_msg);
+int get_hmac_sha256(aws_sigv4_str_t* key, aws_sigv4_str_t* msg, aws_sigv4_str_t* signed_msg);
 
 /** @brief derive signing key
  *
@@ -76,7 +71,7 @@ int get_hmac(aws_sigv4_ustr_t* key, aws_sigv4_ustr_t* msg, aws_sigv4_ustr_t* sig
  * @param[out] signing_key A struct of buffer to store derived signing key
  * @return Status code where zero for success and non-zero for failure
  */
-int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_ustr_t* signing_key);
+int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signing_key);
 
 /** @brief get credential scope string
  *

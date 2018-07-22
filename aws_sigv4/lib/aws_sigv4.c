@@ -16,14 +16,14 @@ static inline void cleanup_str(aws_sigv4_str_t* str)
   }
 }
 
-int get_hexdigest(aws_sigv4_ustr_t* str_in, char* hex_out)
+int get_hexdigest(aws_sigv4_str_t* str_in, unsigned char* hex_out)
 {
   if (str_in == NULL || hex_out == NULL)
   {
     return AWS_SIGV4_INVALID_INPUT_ERROR;
   }
-  static const char digits[] = "0123456789abcdef";
-  char* c_ptr = hex_out;
+  static const unsigned char digits[] = "0123456789abcdef";
+  unsigned char* c_ptr = hex_out;
   for (size_t i = 0; i < str_in->len; i++)
   {
     *(c_ptr++) = digits[(str_in->data[i] & 0xf0) >> 4];
@@ -32,7 +32,7 @@ int get_hexdigest(aws_sigv4_ustr_t* str_in, char* hex_out)
   return AWS_SIGV4_OK;
 }
 
-int get_hex_sha256(aws_sigv4_str_t* str_in, char hex_sha256_out[AWS_SIGV4_HEX_SHA256_LENGTH])
+int get_hex_sha256(aws_sigv4_str_t* str_in, unsigned char hex_sha256_out[AWS_SIGV4_HEX_SHA256_LENGTH])
 {
   if (str_in == NULL)
   {
@@ -44,11 +44,11 @@ int get_hex_sha256(aws_sigv4_str_t* str_in, char hex_sha256_out[AWS_SIGV4_HEX_SH
   SHA256_Update(&ctx, str_in->data, str_in->len);
   SHA256_Final(sha256_buf, &ctx);
 
-  aws_sigv4_ustr_t sha256_str = { .data = sha256_buf, .len = SHA256_DIGEST_LENGTH };
+  aws_sigv4_str_t sha256_str = { .data = sha256_buf, .len = SHA256_DIGEST_LENGTH };
   return get_hexdigest(&sha256_str, hex_sha256_out);
 }
 
-int get_hmac(aws_sigv4_ustr_t* key, aws_sigv4_ustr_t* msg, aws_sigv4_ustr_t* signed_msg)
+int get_hmac_sha256(aws_sigv4_str_t* key, aws_sigv4_str_t* msg, aws_sigv4_str_t* signed_msg)
 {
   int rc = AWS_SIGV4_OK;
   if (key == NULL || empty_str((aws_sigv4_str_t*) key)
@@ -63,7 +63,7 @@ finished:
   return rc;
 }
 
-int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_ustr_t* signing_key)
+int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signing_key)
 {
   int rc = AWS_SIGV4_OK;
   if (signing_key == NULL
@@ -79,8 +79,8 @@ int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_ustr_t* signing_
   }
   unsigned char key_buff[AWS_SIGV4_KEY_BUFF_LEN]  = { 0 };
   unsigned char msg_buff[AWS_SIGV4_KEY_BUFF_LEN]  = { 0 };
-  aws_sigv4_ustr_t key = { .data = key_buff, .len = 0 };
-  aws_sigv4_ustr_t msg = { .data = msg_buff, .len = 0 };
+  aws_sigv4_str_t key = { .data = key_buff, .len = 0 };
+  aws_sigv4_str_t msg = { .data = msg_buff, .len = 0 };
   /* kDate = HMAC("AWS4" + kSecret, Date) */
   strncpy(key_buff, "AWS4", 4);
   strncpy(key_buff + 4, sigv4_params->secret_access_key.data, sigv4_params->secret_access_key.len);
@@ -88,8 +88,8 @@ int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_ustr_t* signing_
   /* data in YYYYMMDD format */
   strncpy(msg_buff, sigv4_params->x_amz_date.data, 8);
   msg.len = 8;
-  cleanup_str(signing_key);
-  rc = get_hmac(&key, &msg, signing_key);
+  cleanup_str((aws_sigv4_str_t*) signing_key);
+  rc = get_hmac_sha256(&key, &msg, signing_key);
   if (rc != AWS_SIGV4_OK)
   {
     goto finished;
@@ -98,11 +98,11 @@ int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_ustr_t* signing_
   memset(key_buff, 0, AWS_SIGV4_KEY_BUFF_LEN);
   strncpy(key_buff, signing_key->data, signing_key->len);
   key.len = signing_key->len;
-  cleanup_str(signing_key);
+  cleanup_str((aws_sigv4_str_t*) signing_key);
   memset(msg_buff, 0, AWS_SIGV4_KEY_BUFF_LEN);
   strncpy(msg_buff, sigv4_params->region.data, sigv4_params->region.len);
   msg.len = sigv4_params->region.len;
-  rc = get_hmac(&key, &msg, signing_key);
+  rc = get_hmac_sha256(&key, &msg, signing_key);
   if (rc != AWS_SIGV4_OK)
   {
     goto finished;
@@ -111,11 +111,11 @@ int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_ustr_t* signing_
   memset(key_buff, 0, AWS_SIGV4_KEY_BUFF_LEN);
   strncpy(key_buff, signing_key->data, signing_key->len);
   key.len = signing_key->len;
-  cleanup_str(signing_key);
+  cleanup_str((aws_sigv4_str_t*) signing_key);
   memset(msg_buff, 0, AWS_SIGV4_KEY_BUFF_LEN);
   strncpy(msg_buff, sigv4_params->service.data, sigv4_params->service.len);
   msg.len = sigv4_params->service.len;
-  rc = get_hmac(&key, &msg, signing_key);
+  rc = get_hmac_sha256(&key, &msg, signing_key);
   if (rc != AWS_SIGV4_OK)
   {
     goto finished;
@@ -124,11 +124,11 @@ int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_ustr_t* signing_
   memset(key_buff, 0, AWS_SIGV4_KEY_BUFF_LEN);
   strncpy(key_buff, signing_key->data, signing_key->len);
   key.len = signing_key->len;
-  cleanup_str(signing_key);
+  cleanup_str((aws_sigv4_str_t*) signing_key);
   memset(msg_buff, 0, AWS_SIGV4_KEY_BUFF_LEN);
   strncpy(msg_buff, "aws4_request", 12);
   msg.len = 12;
-  rc = get_hmac(&key, &msg, signing_key);
+  rc = get_hmac_sha256(&key, &msg, signing_key);
 finished:
   return rc;
 }
@@ -146,7 +146,7 @@ int get_credential_scope(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* cred
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
     goto finished;
   }
-  char* str = credential_scope->data;
+  unsigned char* str = credential_scope->data;
   /* get date in yyyymmdd format */
   strncpy(str, sigv4_params->x_amz_date.data, 8);
   str += 8;
@@ -180,7 +180,7 @@ int get_signed_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signed
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
     goto finished;
   }
-  const char* str = "host;x-amz-date";
+  const unsigned char* str = "host;x-amz-date";
   size_t str_len = strlen(str);
   strncpy(signed_headers->data, str, str_len);
   signed_headers->len = str_len;
@@ -200,7 +200,7 @@ int get_canonical_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* can
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
     goto finished;
   }
-  char* str = canonical_headers->data;
+  unsigned char* str = canonical_headers->data;
   strncpy(str, "host:", 5);
   str += 5;
   /* TODO: Add logic to remove leading and trailing spaces for header values */
@@ -232,7 +232,7 @@ int get_canonical_request(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* can
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
     goto finished;
   }
-  char* str = canonical_request->data;
+  unsigned char* str = canonical_request->data;
   strncpy(str, sigv4_params->method.data, sigv4_params->method.len);
   str += sigv4_params->method.len;
   *(str++) = '\n';
@@ -290,7 +290,7 @@ int get_string_to_sign(aws_sigv4_str_t* request_date, aws_sigv4_str_t* credentia
     goto finished;
   }
 
-  char* str = string_to_sign->data;
+  unsigned char* str = string_to_sign->data;
   size_t algo_str_len = strlen(AWS_SIGV4_SIGNING_ALGORITHM);
   strncpy(str, AWS_SIGV4_SIGNING_ALGORITHM, algo_str_len);
   str += algo_str_len;
@@ -318,8 +318,10 @@ finished:
 
 int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* auth_header)
 {
+  int rc = AWS_SIGV4_OK;
   if (auth_header == NULL)
   {
+    rc = AWS_SIGV4_INVALID_INPUT_ERROR;
     goto err;
   }
 
@@ -327,10 +329,16 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* auth_heade
   auth_header->data = malloc(AWS_SIGV4_AUTH_HEADER_MAX_LEN);
   if (auth_header->data == NULL)
   {
+    rc = AWS_SIGV4_MEMORY_ALLOCATION_ERROR;
     goto err;
   }
-  int len = 0;
-  return len;
+
+  unsigned char* str = auth_header->data;
+  /* AWS4-HMAC-SHA256 */
+  strncpy(str, AWS_SIGV4_SIGNING_ALGORITHM, 16);
+  str += 16;
+  *(str++) = ' ';
+  return rc;
 err:
   /* deallocate memory in case of failure */
   if (auth_header && auth_header->data)
@@ -338,5 +346,5 @@ err:
     free(auth_header->data);
     auth_header->data = NULL;
   }
-  return 0;
+  return rc;
 }
