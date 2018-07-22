@@ -1,6 +1,9 @@
-#include <stdio.h>
 #include <string.h>
+#include <openssl/sha.h>
+#include <openssl/hmac.h>
 #include "aws_sigv4.h"
+
+#define AWS_SIGV4_HEX_SHA256_LENGTH SHA256_DIGEST_LENGTH * 2
 
 static inline int empty_str(aws_sigv4_str_t* str)
 {

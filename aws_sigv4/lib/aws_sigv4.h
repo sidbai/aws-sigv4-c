@@ -1,14 +1,9 @@
 #ifndef __AWS_SIGV4_H
 #define __AWS_SIGV4_H
 
-#include <openssl/sha.h>
-#include <openssl/hmac.h>
-
 #define AWS_SIGV4_SIGNING_ALGORITHM    "AWS4-HMAC-SHA256"
 #define AWS_SIGV4_AUTH_HEADER_MAX_LEN  1024
 #define AWS_SIGV4_KEY_BUFF_LEN         256
-
-#define AWS_SIGV4_HEX_SHA256_LENGTH SHA256_DIGEST_LENGTH * 2
 
 #define AWS_SIGV4_MEMORY_ALLOCATION_ERROR  -2
 #define AWS_SIGV4_INVALID_INPUT_ERROR      -1

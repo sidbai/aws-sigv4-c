@@ -14,12 +14,6 @@ static inline aws_sigv4_str_t construct_str(const unsigned char* cstr)
   return ret;
 }
 
-START_TEST (AwsSigv4Test_Dummy)
-{
-  ck_assert_int_eq(0, 0);
-}
-END_TEST
-
 START_TEST (AwsSigv4Test_HEX)
 {
   /*
@@ -27,7 +21,7 @@ START_TEST (AwsSigv4Test_HEX)
    */
   const unsigned char* expected_output_str1 = "4a656665";
   const unsigned char* expected_output_str2 = "7768617420646f2079612077616e7420666f72206e6f7468696e673f";
-  unsigned char hex_buff[AWS_SIGV4_HEX_SHA256_LENGTH + 1] = { 0 };
+  unsigned char hex_buff[65] = { 0 };
 
   aws_sigv4_str_t str_in_str1 = construct_str("Jefe");
   aws_sigv4_str_t hex_out     = { .data = hex_buff, .len = 0 };
@@ -36,7 +30,7 @@ START_TEST (AwsSigv4Test_HEX)
   ck_assert_pstr_eq(hex_buff, expected_output_str1);
   ck_assert_mem_eq(hex_out.data, expected_output_str1, hex_out.len);
 
-  memset(hex_buff, 0, AWS_SIGV4_HEX_SHA256_LENGTH + 1);
+  memset(hex_buff, 0, 65);
   aws_sigv4_str_t str_in_str2  = construct_str("what do ya want for nothing?");
   rc = get_hexdigest(&str_in_str2, &hex_out);
   ck_assert_int_eq(rc, AWS_SIGV4_OK);
@@ -51,7 +45,7 @@ START_TEST (AwsSigv4Test_HexSHA256)
    * test data is from https://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
    */
   const unsigned char* empty_str_sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-  unsigned char hex_sha256[AWS_SIGV4_HEX_SHA256_LENGTH] = { 0 };
+  unsigned char hex_sha256[65] = { 0 };
   aws_sigv4_str_t str_in          = construct_str(NULL);
   aws_sigv4_str_t hex_sha256_out  = { .data = hex_sha256, .len = 0 };
   int rc = get_hex_sha256(&str_in, &hex_sha256_out);
@@ -73,7 +67,7 @@ START_TEST (AwsSigv4Test_SigningKey)
   unsigned char key_buff[1024] = { 0 };
   unsigned char msg_buff[1024] = { 0 };
   unsigned char signing_key_buff[AWS_SIGV4_KEY_BUFF_LEN]                = { 0 };
-  unsigned char signing_key_hash_buff[AWS_SIGV4_HEX_SHA256_LENGTH + 1]  = { 0 };
+  unsigned char signing_key_hash_buff[65]  = { 0 };
 
   aws_sigv4_str_t signing_key       = { .data = signing_key_buff, .len = 0 };
   aws_sigv4_str_t signing_key_hash  = { .data = signing_key_hash_buff, .len = 0 };
@@ -90,10 +84,10 @@ END_TEST
 START_TEST (AwsSigv4Test_CredentialScope)
 {
   unsigned char credential_scope_data[1024] = { 0 };
-  aws_sigv4_str_t credential_scope    = { .data = credential_scope_data, .len = 0 };
-  aws_sigv4_params_t sigv4_params     = { .x_amz_date = construct_str(NULL),
-                                          .region     = construct_str(NULL),
-                                          .service    = construct_str(NULL) };
+  aws_sigv4_str_t credential_scope  = { .data = credential_scope_data, .len = 0 };
+  aws_sigv4_params_t sigv4_params   = { .x_amz_date = construct_str(NULL),
+                                        .region     = construct_str(NULL),
+                                        .service    = construct_str(NULL) };
   /* invalid input */
   int rc = get_credential_scope(NULL, &credential_scope);
   ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
@@ -161,9 +155,9 @@ END_TEST
 START_TEST (AwsSigv4Test_CanonicalHeaders)
 {
   unsigned char canonical_headers_data[256];
-  aws_sigv4_str_t canonical_headers   = { .data = canonical_headers_data, .len = 0 };
-  aws_sigv4_params_t sigv4_params     = { .host       = construct_str(NULL),
-                                          .x_amz_date = construct_str(NULL) };
+  aws_sigv4_str_t canonical_headers = { .data = canonical_headers_data, .len = 0 };
+  aws_sigv4_params_t sigv4_params   = { .host       = construct_str(NULL),
+                                        .x_amz_date = construct_str(NULL) };
 
   /* invalid input */
   int rc = get_canonical_headers(NULL, &canonical_headers);
@@ -258,10 +252,10 @@ x-amz-date:20150830T123600Z\n\
 \n\
 content-type;host;x-amz-date\n\
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-  aws_sigv4_str_t request_date        = construct_str(request_date_data);
-  aws_sigv4_str_t credential_scope    = construct_str(credential_scope_data);
-  aws_sigv4_str_t canonical_request   = construct_str(canonical_request_data);
-  aws_sigv4_str_t string_to_sign      = { .data = string_to_sign_data, .len = 0 };
+  aws_sigv4_str_t request_date      = construct_str(request_date_data);
+  aws_sigv4_str_t credential_scope  = construct_str(credential_scope_data);
+  aws_sigv4_str_t canonical_request = construct_str(canonical_request_data);
+  aws_sigv4_str_t string_to_sign    = { .data = string_to_sign_data, .len = 0 };
   int rc = get_string_to_sign(&request_date, &credential_scope, &canonical_request, &string_to_sign);
   const unsigned char* expected_string_to_sign = \
 "AWS4-HMAC-SHA256\n\
@@ -281,7 +275,6 @@ Suite * aws_sigv4_test_suite(void)
   Suite *s;
   s = suite_create("AwsSigv4Test");
 
-  TCase *tc_dummy             = tcase_create("AwsSigv4Test_Dummy");
   TCase *tc_hex               = tcase_create("AwsSigv4Test_HEX");
   TCase *tc_hex_sha256        = tcase_create("AwsSigv4Test_HexSHA256");
   TCase *tc_credential_scope  = tcase_create("AwsSigv4Test_CredentialScope");
@@ -290,7 +283,6 @@ Suite * aws_sigv4_test_suite(void)
   TCase *tc_canonical_request = tcase_create("AwsSigv4Test_CanonicalRequest");
   TCase *tc_string_to_sign    = tcase_create("AwsSigv4Test_StringToSign");
   TCase *tc_signing_key       = tcase_create("AwsSigv4Test_SigningKey");
-  tcase_add_test(tc_dummy, AwsSigv4Test_Dummy);
   tcase_add_test(tc_hex_sha256, AwsSigv4Test_HexSHA256);
   tcase_add_test(tc_hex, AwsSigv4Test_HEX);
   tcase_add_test(tc_credential_scope, AwsSigv4Test_CredentialScope);
@@ -299,7 +291,6 @@ Suite * aws_sigv4_test_suite(void)
   tcase_add_test(tc_canonical_request, AwsSigv4Test_CanonicalRequest);
   tcase_add_test(tc_string_to_sign, AwsSigv4Test_StringToSign);
   tcase_add_test(tc_signing_key, AwsSigv4Test_SigningKey);
-  suite_add_tcase(s, tc_dummy);
   suite_add_tcase(s, tc_hex);
   suite_add_tcase(s, tc_hex_sha256);
   suite_add_tcase(s, tc_credential_scope);
