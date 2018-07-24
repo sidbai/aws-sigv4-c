@@ -1,16 +1,11 @@
 #ifndef __AWS_SIGV4_H
 #define __AWS_SIGV4_H
 
-
 #define AWS_SIGV4_MEMORY_ALLOCATION_ERROR  -2
 #define AWS_SIGV4_INVALID_INPUT_ERROR      -1
 #define AWS_SIGV4_OK                        0
 
-
-typedef struct aws_sigv4_str_s {
-  unsigned char*  data;
-  unsigned int    len;
-} aws_sigv4_str_t;
+#include "aws_sigv4_common.h"
 
 typedef struct aws_sigv4_header_s {
   aws_sigv4_str_t name;
@@ -35,7 +30,6 @@ typedef struct aws_sigv4_params_s {
   aws_sigv4_str_t service;
   aws_sigv4_str_t region;
 } aws_sigv4_params_t;
-
 
 /** @brief get hex encoding of a given string
  *

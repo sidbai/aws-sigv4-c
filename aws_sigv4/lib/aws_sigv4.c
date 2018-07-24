@@ -11,70 +11,6 @@
 #define AWS_SIGV4_STRING_TO_SIGN_BUF_LEN      4096
 #define AWS_SIGV4_KEY_BUF_LEN                 256
 
-
-static inline int empty_str(aws_sigv4_str_t* str)
-{
-  return (str == NULL || str->data == NULL || str->len == 0) ? 1 : 0;
-}
-
-/* reference: http://lxr.nginx.org/source/src/core/ngx_string.c */
-static int aws_sigv4_vslprintf(unsigned char* buf, unsigned char* last, const char* fmt, va_list args)
-{
-  unsigned char*    c_ptr = buf;
-  aws_sigv4_str_t*  str;
-
-  while (*fmt && c_ptr < last)
-  {
-    size_t n_max = last - c_ptr;
-    if (*fmt == '%')
-    {
-      if (*(fmt + 1) == 'V')
-      {
-        str = va_arg(args, aws_sigv4_str_t *);
-        if (empty_str(str))
-        {
-          goto finished;
-        }
-        size_t cp_len = n_max >= str->len ? str->len : n_max;
-        strncpy(c_ptr, str->data, cp_len);
-        c_ptr += cp_len;
-        fmt += 2;
-      }
-      else
-      {
-        *(c_ptr++) = *(fmt++);
-      }
-    }
-    else
-    {
-      *(c_ptr++) = *(fmt++);
-    }
-  }
-  *c_ptr = '\0';
-finished:
-  return c_ptr - buf;
-}
-
-static int aws_sigv4_sprintf(unsigned char* buf, const char* fmt, ...)
-{
-  int len = 0;
-  va_list args;
-  va_start(args, fmt);
-  len = aws_sigv4_vslprintf(buf, (void*) -1, fmt, args);
-  va_end(args);
-  return len;
-}
-
-static int aws_sigv4_snprintf(unsigned char* buf, size_t n, const char* fmt, ...)
-{
-  int len = 0;
-  va_list args;
-  va_start(args, fmt);
-  len = aws_sigv4_vslprintf(buf, buf + n, fmt, args);
-  va_end(args);
-  return len;
-}
-
 int get_hexdigest(aws_sigv4_str_t* str_in, aws_sigv4_str_t* hex_out)
 {
   if (str_in == NULL
@@ -113,8 +49,8 @@ int get_hex_sha256(aws_sigv4_str_t* str_in, aws_sigv4_str_t* hex_sha256_out)
 int get_hmac_sha256(aws_sigv4_str_t* key, aws_sigv4_str_t* msg, aws_sigv4_str_t* signed_msg)
 {
   int rc = AWS_SIGV4_OK;
-  if (key == NULL || empty_str(key)
-      || msg == NULL || empty_str(msg)
+  if (key == NULL || aws_sigv4_empty_str(key)
+      || msg == NULL || aws_sigv4_empty_str(msg)
       || signed_msg == NULL || signed_msg->data == NULL)
   {
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
@@ -131,10 +67,10 @@ int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signing_k
   if (signing_key == NULL
       || signing_key->data == NULL
       || sigv4_params == NULL
-      || empty_str(&sigv4_params->secret_access_key)
-      || empty_str(&sigv4_params->x_amz_date)
-      || empty_str(&sigv4_params->region)
-      || empty_str(&sigv4_params->service))
+      || aws_sigv4_empty_str(&sigv4_params->secret_access_key)
+      || aws_sigv4_empty_str(&sigv4_params->x_amz_date)
+      || aws_sigv4_empty_str(&sigv4_params->region)
+      || aws_sigv4_empty_str(&sigv4_params->service))
   {
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
     goto finished;
@@ -182,9 +118,9 @@ int get_credential_scope(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* cred
   if (credential_scope == NULL
       || credential_scope->data == NULL
       || sigv4_params == NULL
-      || empty_str(&sigv4_params->x_amz_date)
-      || empty_str(&sigv4_params->region)
-      || empty_str(&sigv4_params->service))
+      || aws_sigv4_empty_str(&sigv4_params->x_amz_date)
+      || aws_sigv4_empty_str(&sigv4_params->region)
+      || aws_sigv4_empty_str(&sigv4_params->service))
   {
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
     goto finished;
@@ -204,8 +140,8 @@ int get_signed_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signed
   if (signed_headers == NULL
       || signed_headers->data == NULL
       || sigv4_params == NULL
-      || empty_str(&sigv4_params->host)
-      || empty_str(&sigv4_params->x_amz_date))
+      || aws_sigv4_empty_str(&sigv4_params->host)
+      || aws_sigv4_empty_str(&sigv4_params->x_amz_date))
   {
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
     goto finished;
@@ -222,8 +158,8 @@ int get_canonical_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* can
   if (canonical_headers == NULL
       || canonical_headers->data == NULL
       || sigv4_params == NULL
-      || empty_str(&sigv4_params->host)
-      || empty_str(&sigv4_params->x_amz_date))
+      || aws_sigv4_empty_str(&sigv4_params->host)
+      || aws_sigv4_empty_str(&sigv4_params->x_amz_date))
   {
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
     goto finished;
@@ -241,9 +177,9 @@ int get_canonical_request(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* can
   if (canonical_request == NULL
       || canonical_request->data == NULL
       || sigv4_params == NULL
-      || empty_str(&sigv4_params->method)
-      || empty_str(&sigv4_params->uri)
-      || empty_str(&sigv4_params->query_str))
+      || aws_sigv4_empty_str(&sigv4_params->method)
+      || aws_sigv4_empty_str(&sigv4_params->uri)
+      || aws_sigv4_empty_str(&sigv4_params->query_str))
   {
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
     goto finished;
@@ -289,9 +225,9 @@ int get_string_to_sign(aws_sigv4_str_t* request_date, aws_sigv4_str_t* credentia
 {
   int rc = AWS_SIGV4_OK;
   if (string_to_sign == NULL || string_to_sign->data == NULL
-      || request_date == NULL || empty_str(request_date)
-      || credential_scope == NULL || empty_str(credential_scope)
-      || canonical_request == NULL || empty_str(canonical_request))
+      || request_date == NULL || aws_sigv4_empty_str(request_date)
+      || credential_scope == NULL || aws_sigv4_empty_str(credential_scope)
+      || canonical_request == NULL || aws_sigv4_empty_str(canonical_request))
   {
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
     goto finished;
@@ -336,7 +272,7 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_header_t* auth_he
 
   /* AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/<credential_scope> */
   unsigned char* str = auth_header->value.data;
-  if (empty_str(&sigv4_params->access_key_id))
+  if (aws_sigv4_empty_str(&sigv4_params->access_key_id))
   {
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
     goto err;

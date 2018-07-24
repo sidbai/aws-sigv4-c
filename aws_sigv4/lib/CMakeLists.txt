@@ -7,6 +7,7 @@ find_library(LIBOPENSSL ssl)
 find_library(LIBCRYPTO crypto)
 
 add_library(aws_sigv4 SHARED
+    aws_sigv4_common.c
     aws_sigv4.c
 )
 
