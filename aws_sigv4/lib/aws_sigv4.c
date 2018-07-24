@@ -7,23 +7,14 @@
 #define AWS_SIGV4_SIGNING_ALGORITHM   "AWS4-HMAC-SHA256"
 #define AWS_SIGV4_HEX_SHA256_LENGTH SHA256_DIGEST_LENGTH * 2
 #define AWS_SIGV4_AUTH_HEADER_MAX_LEN         1024
-#define AWS_SIGV4_CANONICAL_REQUEST_BUFF_LEN  4096
-#define AWS_SIGV4_STRING_TO_SIGN_BUFF_LEN     4096
-#define AWS_SIGV4_KEY_BUFF_LEN                256
+#define AWS_SIGV4_CANONICAL_REQUEST_BUF_LEN   4096
+#define AWS_SIGV4_STRING_TO_SIGN_BUF_LEN      4096
+#define AWS_SIGV4_KEY_BUF_LEN                 256
 
 
 static inline int empty_str(aws_sigv4_str_t* str)
 {
   return (str == NULL || str->data == NULL || str->len == 0) ? 1 : 0;
-}
-
-static inline void cleanup_str(aws_sigv4_str_t* str)
-{
-  if (str != NULL && str->data != NULL)
-  {
-    memset(str->data, 0, str->len);
-    str->len = 0;
-  }
 }
 
 /* reference: http://lxr.nginx.org/source/src/core/ngx_string.c */
@@ -42,7 +33,7 @@ static int aws_sigv4_vslprintf(unsigned char* buf, unsigned char* last, const ch
         str = va_arg(args, aws_sigv4_str_t *);
         if (empty_str(str))
         {
-          return -1;
+          goto finished;
         }
         size_t cp_len = n_max >= str->len ? str->len : n_max;
         strncpy(c_ptr, str->data, cp_len);
@@ -59,6 +50,8 @@ static int aws_sigv4_vslprintf(unsigned char* buf, unsigned char* last, const ch
       *(c_ptr++) = *(fmt++);
     }
   }
+  *c_ptr = '\0';
+finished:
   return c_ptr - buf;
 }
 
@@ -146,25 +139,21 @@ int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signing_k
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
     goto finished;
   }
-  unsigned char key_buf[AWS_SIGV4_KEY_BUFF_LEN]  = { 0 };
-  unsigned char msg_buf[AWS_SIGV4_KEY_BUFF_LEN]  = { 0 };
+  unsigned char key_buf[AWS_SIGV4_KEY_BUF_LEN]  = { 0 };
+  unsigned char msg_buf[AWS_SIGV4_KEY_BUF_LEN]  = { 0 };
   aws_sigv4_str_t key = { .data = key_buf, .len = 0 };
   aws_sigv4_str_t msg = { .data = msg_buf, .len = 0 };
   /* kDate = HMAC("AWS4" + kSecret, Date) */
   key.len = aws_sigv4_sprintf(key_buf, "AWS4%V", &sigv4_params->secret_access_key);
   /* data in YYYYMMDD format */
   msg.len = aws_sigv4_snprintf(msg_buf, 8, "%V", &sigv4_params->x_amz_date);
-  cleanup_str(signing_key);
   rc = get_hmac_sha256(&key, &msg, signing_key);
   if (rc != AWS_SIGV4_OK)
   {
     goto finished;
   }
   /* kRegion = HMAC(kDate, Region) */
-  memset(key_buf, 0, AWS_SIGV4_KEY_BUFF_LEN);
   key.len = aws_sigv4_sprintf(key_buf, "%V", signing_key);
-  cleanup_str(signing_key);
-  memset(msg_buf, 0, AWS_SIGV4_KEY_BUFF_LEN);
   msg.len = aws_sigv4_sprintf(msg_buf, "%V", &sigv4_params->region);
   rc = get_hmac_sha256(&key, &msg, signing_key);
   if (rc != AWS_SIGV4_OK)
@@ -172,10 +161,7 @@ int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signing_k
     goto finished;
   }
   /* kService = HMAC(kRegion, Service) */
-  memset(key_buf, 0, AWS_SIGV4_KEY_BUFF_LEN);
   key.len = aws_sigv4_sprintf(key_buf, "%V", signing_key);
-  cleanup_str(signing_key);
-  memset(msg_buf, 0, AWS_SIGV4_KEY_BUFF_LEN);
   msg.len = aws_sigv4_sprintf(msg_buf, "%V", &sigv4_params->service);
   rc = get_hmac_sha256(&key, &msg, signing_key);
   if (rc != AWS_SIGV4_OK)
@@ -183,10 +169,7 @@ int get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signing_k
     goto finished;
   }
   /* kSigning = HMAC(kService, "aws4_request") */
-  memset(key_buf, 0, AWS_SIGV4_KEY_BUFF_LEN);
   key.len = aws_sigv4_sprintf(key_buf, "%V", signing_key);
-  cleanup_str(signing_key);
-  memset(msg_buf, 0, AWS_SIGV4_KEY_BUFF_LEN);
   msg.len = aws_sigv4_sprintf(msg_buf, "aws4_request");
   rc = get_hmac_sha256(&key, &msg, signing_key);
 finished:
@@ -209,7 +192,7 @@ int get_credential_scope(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* cred
   unsigned char* str = credential_scope->data;
   /* get date in yyyymmdd format */
   str += aws_sigv4_snprintf(str, 8, "%V", &sigv4_params->x_amz_date);
-  str +=  aws_sigv4_sprintf(str, "/%V/%V/aws4_request",&sigv4_params->region, &sigv4_params->service);
+  str += aws_sigv4_sprintf(str, "/%V/%V/aws4_request",&sigv4_params->region, &sigv4_params->service);
   credential_scope->len = str - credential_scope->data;
 finished:
   return rc;
@@ -341,13 +324,12 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_header_t* auth_he
   }
 
   /* TODO: Support custom memory allocator */
-  auth_header->value.data = malloc(AWS_SIGV4_AUTH_HEADER_MAX_LEN);
+  auth_header->value.data = calloc(AWS_SIGV4_AUTH_HEADER_MAX_LEN, sizeof(unsigned char));
   if (auth_header->value.data == NULL)
   {
     rc = AWS_SIGV4_MEMORY_ALLOCATION_ERROR;
     goto err;
   }
-  memset(auth_header->value.data, 0, AWS_SIGV4_AUTH_HEADER_MAX_LEN);
 
   auth_header->name.data  = AWS_SIGV4_AUTH_HEADER_NAME;
   auth_header->name.len   = strlen(AWS_SIGV4_AUTH_HEADER_NAME);
@@ -382,7 +364,7 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_header_t* auth_he
   /* Signature=<signature> */
   str += aws_sigv4_sprintf(str, ", Signature=", &sigv4_params->access_key_id);
   /* Task 1: Create a canonical request */
-  unsigned char canonical_request_buf[AWS_SIGV4_CANONICAL_REQUEST_BUFF_LEN] = { 0 };
+  unsigned char canonical_request_buf[AWS_SIGV4_CANONICAL_REQUEST_BUF_LEN]  = { 0 };
   aws_sigv4_str_t canonical_request = { .data = canonical_request_buf, .len = 0 };
   rc = get_canonical_request(sigv4_params, &canonical_request);
   if (rc != AWS_SIGV4_OK)
@@ -390,7 +372,7 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_header_t* auth_he
     goto err;
   }
   /* Task 2: Create a string to sign */
-  unsigned char string_to_sign_buf[AWS_SIGV4_STRING_TO_SIGN_BUFF_LEN] = { 0 };
+  unsigned char string_to_sign_buf[AWS_SIGV4_STRING_TO_SIGN_BUF_LEN]  = { 0 };
   aws_sigv4_str_t string_to_sign = { .data = string_to_sign_buf, .len = 0 };
   rc = get_string_to_sign(&sigv4_params->x_amz_date, &credential_scope, &canonical_request, &string_to_sign);
   if (rc != AWS_SIGV4_OK)
@@ -399,7 +381,7 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_header_t* auth_he
   }
   /* Task 3: Calculate the signature */
   /* 3.1: Derive signing key */
-  unsigned char signing_key_buf[AWS_SIGV4_KEY_BUFF_LEN] = { 0 };
+  unsigned char signing_key_buf[AWS_SIGV4_KEY_BUF_LEN] = { 0 };
   aws_sigv4_str_t signing_key = { .data = signing_key_buf, .len = 0 };
   rc = get_signing_key(sigv4_params, &signing_key);
   if (rc != AWS_SIGV4_OK)
