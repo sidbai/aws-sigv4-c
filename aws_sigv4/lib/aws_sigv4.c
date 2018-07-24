@@ -26,6 +26,7 @@ static inline void cleanup_str(aws_sigv4_str_t* str)
   }
 }
 
+/* reference: http://lxr.nginx.org/source/src/core/ngx_string.c */
 static int aws_sigv4_vslprintf(unsigned char* buf, unsigned char* last, const char* fmt, va_list args)
 {
   unsigned char*    c_ptr = buf;
@@ -351,10 +352,8 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_header_t* auth_he
   auth_header->name.data  = AWS_SIGV4_AUTH_HEADER_NAME;
   auth_header->name.len   = strlen(AWS_SIGV4_AUTH_HEADER_NAME);
 
-  /* AWS4-HMAC-SHA256 */
+  /* AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/<credential_scope> */
   unsigned char* str = auth_header->value.data;
-
-  /* Credential=AKIDEXAMPLE/<credential_scope> */
   if (empty_str(&sigv4_params->access_key_id))
   {
     rc = AWS_SIGV4_INVALID_INPUT_ERROR;
