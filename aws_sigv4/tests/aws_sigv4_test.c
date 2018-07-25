@@ -25,15 +25,13 @@ START_TEST (AwsSigv4Test_HEX)
 
   aws_sigv4_str_t str_in_str1 = construct_str("Jefe");
   aws_sigv4_str_t hex_out     = { .data = hex_buff, .len = 0 };
-  int rc = get_hexdigest(&str_in_str1, &hex_out);
-  ck_assert_int_eq(rc, AWS_SIGV4_OK);
+  get_hexdigest(&str_in_str1, &hex_out);
   ck_assert_pstr_eq(hex_buff, expected_output_str1);
   ck_assert_mem_eq(hex_out.data, expected_output_str1, hex_out.len);
 
   memset(hex_buff, 0, 65);
   aws_sigv4_str_t str_in_str2  = construct_str("what do ya want for nothing?");
-  rc = get_hexdigest(&str_in_str2, &hex_out);
-  ck_assert_int_eq(rc, AWS_SIGV4_OK);
+  get_hexdigest(&str_in_str2, &hex_out);
   ck_assert_pstr_eq(hex_buff, expected_output_str2);
   ck_assert_mem_eq(hex_out.data, expected_output_str2, hex_out.len);
 }
@@ -48,8 +46,7 @@ START_TEST (AwsSigv4Test_HexSHA256)
   unsigned char hex_sha256[65] = { 0 };
   aws_sigv4_str_t str_in          = construct_str(NULL);
   aws_sigv4_str_t hex_sha256_out  = { .data = hex_sha256, .len = 0 };
-  int rc = get_hex_sha256(&str_in, &hex_sha256_out);
-  ck_assert_int_eq(rc, AWS_SIGV4_OK);
+  get_hex_sha256(&str_in, &hex_sha256_out);
   ck_assert_pstr_eq(hex_sha256, empty_str_sha256);
   ck_assert_mem_eq(hex_sha256_out.data, empty_str_sha256, hex_sha256_out.len);
 }
@@ -71,10 +68,8 @@ START_TEST (AwsSigv4Test_SigningKey)
 
   aws_sigv4_str_t signing_key       = { .data = signing_key_buff, .len = 0 };
   aws_sigv4_str_t signing_key_hash  = { .data = signing_key_hash_buff, .len = 0 };
-  int rc = get_signing_key(&sigv4_params, &signing_key);
-  ck_assert_int_eq(rc, AWS_SIGV4_OK);
-  rc = get_hexdigest(&signing_key, &signing_key_hash);
-  ck_assert_int_eq(rc, AWS_SIGV4_OK);
+  get_signing_key(&sigv4_params, &signing_key);
+  get_hexdigest(&signing_key, &signing_key_hash);
   const unsigned char* expected_signing_key_hash = "c4afb1cc5771d871763a393e44b703571b55cc28424d1a5e86da6ed3c154a4b9";
   ck_assert_pstr_eq(signing_key_hash_buff, expected_signing_key_hash);
   ck_assert_mem_eq(signing_key_hash.data, expected_signing_key_hash, signing_key_hash.len);
@@ -85,36 +80,12 @@ START_TEST (AwsSigv4Test_CredentialScope)
 {
   unsigned char credential_scope_data[1024] = { 0 };
   aws_sigv4_str_t credential_scope  = { .data = credential_scope_data, .len = 0 };
-  aws_sigv4_params_t sigv4_params   = { .x_amz_date = construct_str(NULL),
-                                        .region     = construct_str(NULL),
-                                        .service    = construct_str(NULL) };
-  /* invalid input */
-  int rc = get_credential_scope(NULL, &credential_scope);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  rc = get_credential_scope(&sigv4_params, &credential_scope);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  const unsigned char* test_iso8601_date = "20180717T074800Z";
-  sigv4_params.x_amz_date = construct_str(test_iso8601_date);
-  rc = get_credential_scope(&sigv4_params, &credential_scope);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  const unsigned char* test_region = "us-east-1";
-  sigv4_params.region = construct_str(test_region);
-  rc = get_credential_scope(&sigv4_params, &credential_scope);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  const unsigned char* test_service = "s3";
-  sigv4_params.service = construct_str(test_service);
-  rc = get_credential_scope(&sigv4_params, NULL);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  /* happy case */
-  rc = get_credential_scope(&sigv4_params, &credential_scope);
+  aws_sigv4_params_t sigv4_params   = { .x_amz_date = construct_str("20180717T074800Z"),
+                                        .region     = construct_str("us-east-1"),
+                                        .service    = construct_str("s3") };
+  get_credential_scope(&sigv4_params, &credential_scope);
   const unsigned char* expected_credential_scope = "20180717/us-east-1/s3/aws4_request";
   int expected_len = strlen(expected_credential_scope);
-  ck_assert_int_eq(rc, AWS_SIGV4_OK);
   ck_assert_mem_eq(credential_scope.data, expected_credential_scope, expected_len);
   ck_assert_int_eq(credential_scope.len, expected_len);
 }
@@ -124,29 +95,12 @@ START_TEST (AwsSigv4Test_SignedHeaders)
 {
   unsigned char signed_headers_data[128];
   aws_sigv4_str_t signed_headers  = { .data = signed_headers_data, .len = 0 };
-  aws_sigv4_params_t sigv4_params = { .host       = construct_str(NULL),
-                                      .x_amz_date = construct_str(NULL) };
+  aws_sigv4_params_t sigv4_params = { .host       = construct_str("abc.com"),
+                                      .x_amz_date = construct_str("20180717T074800Z") };
 
-  /* invalid input */
-  int rc = get_signed_headers(NULL, &signed_headers);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  rc = get_signed_headers(&sigv4_params, &signed_headers);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  sigv4_params.host = construct_str("abc.com");
-  rc = get_signed_headers(&sigv4_params, &signed_headers);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  sigv4_params.x_amz_date = construct_str("20180717T074800Z");
-  rc = get_signed_headers(&sigv4_params, NULL);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  /* happy case */
-  rc = get_signed_headers(&sigv4_params, &signed_headers);
+  get_signed_headers(&sigv4_params, &signed_headers);
   const unsigned char* expected_signed_headers = "host;x-amz-date";
   int expected_len = strlen(expected_signed_headers);
-  ck_assert_int_eq(rc, AWS_SIGV4_OK);
   ck_assert_mem_eq(signed_headers.data, expected_signed_headers, expected_len);
   ck_assert_int_eq(signed_headers.len, expected_len);
 }
@@ -156,29 +110,12 @@ START_TEST (AwsSigv4Test_CanonicalHeaders)
 {
   unsigned char canonical_headers_data[256];
   aws_sigv4_str_t canonical_headers = { .data = canonical_headers_data, .len = 0 };
-  aws_sigv4_params_t sigv4_params   = { .host       = construct_str(NULL),
-                                        .x_amz_date = construct_str(NULL) };
+  aws_sigv4_params_t sigv4_params   = { .host       = construct_str("abc.com"),
+                                        .x_amz_date = construct_str("20180717T074800Z") };
 
-  /* invalid input */
-  int rc = get_canonical_headers(NULL, &canonical_headers);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  rc = get_canonical_headers(&sigv4_params, &canonical_headers);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  sigv4_params.host = construct_str("abc.com");
-  rc = get_canonical_headers(&sigv4_params, &canonical_headers);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  sigv4_params.x_amz_date = construct_str("20180717T074800Z");
-  rc = get_canonical_headers(&sigv4_params, NULL);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  /* happy case */
-  rc = get_canonical_headers(&sigv4_params, &canonical_headers);
+  get_canonical_headers(&sigv4_params, &canonical_headers);
   const unsigned char* expected_canonical_headers = "host:abc.com\nx-amz-date:20180717T074800Z\n";
   int expected_len = strlen(expected_canonical_headers);
-  ck_assert_int_eq(rc, AWS_SIGV4_OK);
   ck_assert_mem_eq(canonical_headers.data, expected_canonical_headers, expected_len);
   ck_assert_int_eq(canonical_headers.len, expected_len);
 }
@@ -189,45 +126,24 @@ START_TEST (AwsSigv4Test_CanonicalRequest)
   /* test data is from https://docs.aws.amazon.com/general/latest/gr/signature-v4-test-suite.html */
   unsigned char canonical_request_data[1024] = { 0 };
   aws_sigv4_str_t canonical_request = { .data = canonical_request_data, .len = 0 };
-  aws_sigv4_params_t sigv4_params   = { .method     = construct_str(NULL),
+  aws_sigv4_params_t sigv4_params   = { .method     = construct_str("GET"),
                                         .host       = construct_str("example.amazonaws.com"),
                                         .x_amz_date = construct_str("20150830T123600Z"),
-                                        .uri        = construct_str(NULL),
-                                        .query_str  = construct_str(NULL),
+                                        .uri        = construct_str("/"),
+                                        .query_str  = construct_str("Param1=value1&Param2=value2"),
                                         .payload    = construct_str(NULL) };
 
-  /* invalid input */
-  int rc = get_canonical_request(NULL, &canonical_request);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  rc = get_canonical_request(&sigv4_params, &canonical_request);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  sigv4_params.method = construct_str("GET");
-  rc = get_canonical_request(&sigv4_params, &canonical_request);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  sigv4_params.uri = construct_str("/");
-  rc = get_canonical_request(&sigv4_params, NULL);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  sigv4_params.query_str = construct_str("Param2=value2&Param1=value1");
-  rc = get_canonical_request(&sigv4_params, NULL);
-  ck_assert_int_eq(rc, AWS_SIGV4_INVALID_INPUT_ERROR);
-
-  /* happy case */
-  rc = get_canonical_request(&sigv4_params, &canonical_request);
+  get_canonical_request(&sigv4_params, &canonical_request);
   const unsigned char* expected_canonical_request = \
 "GET\n\
 /\n\
-Param2=value2&Param1=value1\n\
+Param1=value1&Param2=value2\n\
 host:example.amazonaws.com\n\
 x-amz-date:20150830T123600Z\n\
 \n\
 host;x-amz-date\n\
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
   int expected_len = strlen(expected_canonical_request);
-  ck_assert_int_eq(rc, AWS_SIGV4_OK);
   ck_assert_int_eq(canonical_request.len, expected_len);
   ck_assert_pstr_eq(canonical_request.data, expected_canonical_request);
   ck_assert_mem_eq(canonical_request.data, expected_canonical_request, expected_len);
@@ -237,7 +153,6 @@ END_TEST
 START_TEST (AwsSigv4Test_StringToSign)
 {
   /*
-   * happy case
    * test data is from https://docs.aws.amazon.com/general/latest/gr/signature-v4-test-suite.html
    */
   unsigned char string_to_sign_data[1024] = { 0 };
@@ -256,14 +171,13 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
   aws_sigv4_str_t credential_scope  = construct_str(credential_scope_data);
   aws_sigv4_str_t canonical_request = construct_str(canonical_request_data);
   aws_sigv4_str_t string_to_sign    = { .data = string_to_sign_data, .len = 0 };
-  int rc = get_string_to_sign(&request_date, &credential_scope, &canonical_request, &string_to_sign);
+  get_string_to_sign(&request_date, &credential_scope, &canonical_request, &string_to_sign);
   const unsigned char* expected_string_to_sign = \
 "AWS4-HMAC-SHA256\n\
 20150830T123600Z\n\
 20150830/us-east-1/service/aws4_request\n\
 816cd5b414d056048ba4f7c5386d6e0533120fb1fcfa93762cf0fc39e2cf19e0";
   int expected_len = strlen(expected_string_to_sign);
-  ck_assert_int_eq(rc, AWS_SIGV4_OK);
   ck_assert_int_eq(string_to_sign.len, expected_len);
   ck_assert_pstr_eq(string_to_sign.data, expected_string_to_sign);
   ck_assert_mem_eq(string_to_sign.data, expected_string_to_sign, expected_len);
