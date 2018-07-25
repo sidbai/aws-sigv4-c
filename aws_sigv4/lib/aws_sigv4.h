@@ -36,49 +36,56 @@ typedef struct aws_sigv4_params_s {
  * @param[in] str_in Input string
  * @param[out] hex_out Output buffer to store hex encoded string
  */
-void get_hexdigest(aws_sigv4_str_t* str_in, aws_sigv4_str_t* hex_out);
+void get_hexdigest(aws_sigv4_str_t* str_in,
+                   aws_sigv4_str_t* hex_out);
 
 /** @brief get hex encoded sha256 of a given string
  *
  * @param[in] str_in Input string
  * @param[out] hex_sha256_out Output buffer to store hex encoded sha256 string
  */
-void get_hex_sha256(aws_sigv4_str_t* str_in, aws_sigv4_str_t* hex_sha256_out);
+void get_hex_sha256(aws_sigv4_str_t* str_in,
+                    aws_sigv4_str_t* hex_sha256_out);
 
 /** @brief derive signing key
  *
  * @param[in] sigv4_params A pointer to a struct of sigv4 parameters
  * @param[out] signing_key A struct of buffer to store derived signing key
  */
-void get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signing_key);
+void get_signing_key(aws_sigv4_params_t* sigv4_params,
+                     aws_sigv4_str_t* signing_key);
 
 /** @brief get credential scope string
  *
  * @param[in] sigv4_params A pointer to a struct of sigv4 parameters
  * @param[out] credential_scope A struct of buffer to store credential scope string
  */
-void get_credential_scope(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* credential_scope);
+void get_credential_scope(aws_sigv4_params_t* sigv4_params,
+                          aws_sigv4_str_t* credential_scope);
 
 /** @brief get signed headers string
  *
  * @param[in] sigv4_params A pointer to a struct of sigv4 parameters
  * @param[out] signed_headers A struct of buffer to store signed headers string
  */
-void get_signed_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signed_headers);
+void get_signed_headers(aws_sigv4_params_t* sigv4_params,
+                        aws_sigv4_str_t* signed_headers);
 
 /** @brief get canonical headers string
  *
  * @param[in] sigv4_params A pointer to a struct of sigv4 parameters
  * @param[out] canonical_headers A struct of buffer to store canonical headers string
  */
-void get_canonical_headers(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* canonical_headers);
+void get_canonical_headers(aws_sigv4_params_t* sigv4_params,
+                           aws_sigv4_str_t* canonical_headers);
 
 /** @brief get canonical request string
  *
  * @param[in] sigv4_params A pointer to a struct of sigv4 parameters
  * @param[out] canonical_request A struct of buffer to store canonical request string
  */
-void get_canonical_request(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* canonical_request);
+void get_canonical_request(aws_sigv4_params_t* sigv4_params,
+                           aws_sigv4_str_t* canonical_request);
 
 /** @brief get string to sign
  *
@@ -87,8 +94,10 @@ void get_canonical_request(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* ca
  * @param[in] canonical_request A pointer to a struct of precomputed canonical request
  * @param[out] string_to_sign A struct of buffer to store string to sign
  */
-void get_string_to_sign(aws_sigv4_str_t* request_date, aws_sigv4_str_t* credential_scope,
-                        aws_sigv4_str_t* canonical_request, aws_sigv4_str_t* string_to_sign);
+void get_string_to_sign(aws_sigv4_str_t* request_date,
+                        aws_sigv4_str_t* credential_scope,
+                        aws_sigv4_str_t* canonical_request,
+                        aws_sigv4_str_t* string_to_sign);
 
 /** @brief perform sigv4 signing
  *
