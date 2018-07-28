@@ -7,6 +7,17 @@ int aws_sigv4_empty_str(aws_sigv4_str_t* str)
   return (str == NULL || str->data == NULL || str->len == 0) ? 1 : 0;
 }
 
+aws_sigv4_str_t aws_sigv4_string(const unsigned char* cstr)
+{
+  aws_sigv4_str_t ret = { .data = NULL };
+  if (cstr)
+  {
+    ret.data = (unsigned char*) cstr;
+    ret.len  = strlen(cstr);
+  }
+  return ret;
+}
+
 /* reference: http://lxr.nginx.org/source/src/core/ngx_string.c */
 static int aws_sigv4_vslprintf(unsigned char* buf, unsigned char* last, const char* fmt, va_list args)
 {

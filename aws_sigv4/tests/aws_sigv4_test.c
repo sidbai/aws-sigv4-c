@@ -1,18 +1,6 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <check.h>
 #include "aws_sigv4.h"
-
-static inline aws_sigv4_str_t construct_str(const unsigned char* cstr)
-{
-  aws_sigv4_str_t ret = { .data = NULL, .len = 0 };
-  if (cstr)
-  {
-    ret.data = (unsigned char*) cstr;
-    ret.len  = strlen(cstr);
-  }
-  return ret;
-}
 
 START_TEST (AwsSigv4Test_HEX)
 {
@@ -23,14 +11,14 @@ START_TEST (AwsSigv4Test_HEX)
   const unsigned char* expected_output_str2 = "7768617420646f2079612077616e7420666f72206e6f7468696e673f";
   unsigned char hex_buff[65] = { 0 };
 
-  aws_sigv4_str_t str_in_str1 = construct_str("Jefe");
-  aws_sigv4_str_t hex_out     = { .data = hex_buff, .len = 0 };
+  aws_sigv4_str_t str_in_str1 = aws_sigv4_string("Jefe");
+  aws_sigv4_str_t hex_out     = { .data = hex_buff };
   get_hexdigest(&str_in_str1, &hex_out);
   ck_assert_pstr_eq(hex_buff, expected_output_str1);
   ck_assert_mem_eq(hex_out.data, expected_output_str1, hex_out.len);
 
   memset(hex_buff, 0, 65);
-  aws_sigv4_str_t str_in_str2  = construct_str("what do ya want for nothing?");
+  aws_sigv4_str_t str_in_str2  = aws_sigv4_string("what do ya want for nothing?");
   get_hexdigest(&str_in_str2, &hex_out);
   ck_assert_pstr_eq(hex_buff, expected_output_str2);
   ck_assert_mem_eq(hex_out.data, expected_output_str2, hex_out.len);
@@ -44,8 +32,8 @@ START_TEST (AwsSigv4Test_HexSHA256)
    */
   const unsigned char* empty_str_sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
   unsigned char hex_sha256[65] = { 0 };
-  aws_sigv4_str_t str_in          = construct_str(NULL);
-  aws_sigv4_str_t hex_sha256_out  = { .data = hex_sha256, .len = 0 };
+  aws_sigv4_str_t str_in          = aws_sigv4_string(NULL);
+  aws_sigv4_str_t hex_sha256_out  = { .data = hex_sha256 };
   get_hex_sha256(&str_in, &hex_sha256_out);
   ck_assert_pstr_eq(hex_sha256, empty_str_sha256);
   ck_assert_mem_eq(hex_sha256_out.data, empty_str_sha256, hex_sha256_out.len);
@@ -57,17 +45,17 @@ START_TEST (AwsSigv4Test_SigningKey)
   /*
    * test data is from https://docs.aws.amazon.com/general/latest/gr/sigv4-calculate-signature.html
    */
-  aws_sigv4_params_t sigv4_params = { .secret_access_key  = construct_str("wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"),
-                                      .x_amz_date = construct_str("20150830T050102Z"),
-                                      .region     = construct_str("us-east-1"),
-                                      .service    = construct_str("iam") };
+  aws_sigv4_params_t sigv4_params = { .secret_access_key  = aws_sigv4_string("wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"),
+                                      .x_amz_date = aws_sigv4_string("20150830T050102Z"),
+                                      .region     = aws_sigv4_string("us-east-1"),
+                                      .service    = aws_sigv4_string("iam") };
   unsigned char key_buff[1024] = { 0 };
   unsigned char msg_buff[1024] = { 0 };
   unsigned char signing_key_buff[32]      = { 0 };
   unsigned char signing_key_hash_buff[65] = { 0 };
 
-  aws_sigv4_str_t signing_key       = { .data = signing_key_buff, .len = 0 };
-  aws_sigv4_str_t signing_key_hash  = { .data = signing_key_hash_buff, .len = 0 };
+  aws_sigv4_str_t signing_key       = { .data = signing_key_buff };
+  aws_sigv4_str_t signing_key_hash  = { .data = signing_key_hash_buff };
   get_signing_key(&sigv4_params, &signing_key);
   get_hexdigest(&signing_key, &signing_key_hash);
   const unsigned char* expected_signing_key_hash = "c4afb1cc5771d871763a393e44b703571b55cc28424d1a5e86da6ed3c154a4b9";
@@ -79,10 +67,10 @@ END_TEST
 START_TEST (AwsSigv4Test_CredentialScope)
 {
   unsigned char credential_scope_data[1024] = { 0 };
-  aws_sigv4_str_t credential_scope  = { .data = credential_scope_data, .len = 0 };
-  aws_sigv4_params_t sigv4_params   = { .x_amz_date = construct_str("20180717T074800Z"),
-                                        .region     = construct_str("us-east-1"),
-                                        .service    = construct_str("s3") };
+  aws_sigv4_str_t credential_scope  = { .data = credential_scope_data };
+  aws_sigv4_params_t sigv4_params   = { .x_amz_date = aws_sigv4_string("20180717T074800Z"),
+                                        .region     = aws_sigv4_string("us-east-1"),
+                                        .service    = aws_sigv4_string("s3") };
   get_credential_scope(&sigv4_params, &credential_scope);
   const unsigned char* expected_credential_scope = "20180717/us-east-1/s3/aws4_request";
   int expected_len = strlen(expected_credential_scope);
@@ -94,9 +82,9 @@ END_TEST
 START_TEST (AwsSigv4Test_SignedHeaders)
 {
   unsigned char signed_headers_data[128];
-  aws_sigv4_str_t signed_headers  = { .data = signed_headers_data, .len = 0 };
-  aws_sigv4_params_t sigv4_params = { .host       = construct_str("abc.com"),
-                                      .x_amz_date = construct_str("20180717T074800Z") };
+  aws_sigv4_str_t signed_headers  = { .data = signed_headers_data };
+  aws_sigv4_params_t sigv4_params = { .host       = aws_sigv4_string("abc.com"),
+                                      .x_amz_date = aws_sigv4_string("20180717T074800Z") };
 
   get_signed_headers(&sigv4_params, &signed_headers);
   const unsigned char* expected_signed_headers = "host;x-amz-date";
@@ -109,9 +97,9 @@ END_TEST
 START_TEST (AwsSigv4Test_CanonicalHeaders)
 {
   unsigned char canonical_headers_data[256];
-  aws_sigv4_str_t canonical_headers = { .data = canonical_headers_data, .len = 0 };
-  aws_sigv4_params_t sigv4_params   = { .host       = construct_str("abc.com"),
-                                        .x_amz_date = construct_str("20180717T074800Z") };
+  aws_sigv4_str_t canonical_headers = { .data = canonical_headers_data };
+  aws_sigv4_params_t sigv4_params   = { .host       = aws_sigv4_string("abc.com"),
+                                        .x_amz_date = aws_sigv4_string("20180717T074800Z") };
 
   get_canonical_headers(&sigv4_params, &canonical_headers);
   const unsigned char* expected_canonical_headers = "host:abc.com\nx-amz-date:20180717T074800Z\n";
@@ -125,13 +113,13 @@ START_TEST (AwsSigv4Test_CanonicalRequest)
 {
   /* test data is from https://docs.aws.amazon.com/general/latest/gr/signature-v4-test-suite.html */
   unsigned char canonical_request_data[1024] = { 0 };
-  aws_sigv4_str_t canonical_request = { .data = canonical_request_data, .len = 0 };
-  aws_sigv4_params_t sigv4_params   = { .method     = construct_str("GET"),
-                                        .host       = construct_str("example.amazonaws.com"),
-                                        .x_amz_date = construct_str("20150830T123600Z"),
-                                        .uri        = construct_str("/"),
-                                        .query_str  = construct_str("Param1=value1&Param2=value2"),
-                                        .payload    = construct_str(NULL) };
+  aws_sigv4_str_t canonical_request = { .data = canonical_request_data };
+  aws_sigv4_params_t sigv4_params   = { .method     = aws_sigv4_string("GET"),
+                                        .host       = aws_sigv4_string("example.amazonaws.com"),
+                                        .x_amz_date = aws_sigv4_string("20150830T123600Z"),
+                                        .uri        = aws_sigv4_string("/"),
+                                        .query_str  = aws_sigv4_string("Param1=value1&Param2=value2"),
+                                        .payload    = aws_sigv4_string(NULL) };
 
   get_canonical_request(&sigv4_params, &canonical_request);
   const unsigned char* expected_canonical_request = \
@@ -167,10 +155,10 @@ x-amz-date:20150830T123600Z\n\
 \n\
 host;x-amz-date\n\
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-  aws_sigv4_str_t request_date      = construct_str(request_date_data);
-  aws_sigv4_str_t credential_scope  = construct_str(credential_scope_data);
-  aws_sigv4_str_t canonical_request = construct_str(canonical_request_data);
-  aws_sigv4_str_t string_to_sign    = { .data = string_to_sign_data, .len = 0 };
+  aws_sigv4_str_t request_date      = aws_sigv4_string(request_date_data);
+  aws_sigv4_str_t credential_scope  = aws_sigv4_string(credential_scope_data);
+  aws_sigv4_str_t canonical_request = aws_sigv4_string(canonical_request_data);
+  aws_sigv4_str_t string_to_sign    = { .data = string_to_sign_data };
   get_string_to_sign(&request_date, &credential_scope, &canonical_request, &string_to_sign);
   const unsigned char* expected_string_to_sign = \
 "AWS4-HMAC-SHA256\n\
@@ -187,17 +175,17 @@ END_TEST
 START_TEST (AwsSigv4Test_AwsSigv4Sign)
 {
   /* test data is from https://docs.aws.amazon.com/general/latest/gr/signature-v4-test-suite.html */
-  aws_sigv4_params_t sigv4_params   = { .secret_access_key  = construct_str("wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"),
-                                        .access_key_id      = construct_str("AKIDEXAMPLE"),
-                                        .method             = construct_str("GET"),
-                                        .host               = construct_str("example.amazonaws.com"),
-                                        .x_amz_date         = construct_str("20150830T123600Z"),
-                                        .uri                = construct_str("/"),
-                                        .query_str          = construct_str("Param1=value1&Param2=value2"),
-                                        .payload            = construct_str(NULL),
-                                        .region             = construct_str("us-east-1"),
-                                        .service            = construct_str("service") };
-  aws_sigv4_header_t auth_header = { .name = construct_str(NULL), .value = construct_str(NULL) };
+  aws_sigv4_params_t sigv4_params   = { .secret_access_key  = aws_sigv4_string("wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"),
+                                        .access_key_id      = aws_sigv4_string("AKIDEXAMPLE"),
+                                        .method             = aws_sigv4_string("GET"),
+                                        .host               = aws_sigv4_string("example.amazonaws.com"),
+                                        .x_amz_date         = aws_sigv4_string("20150830T123600Z"),
+                                        .uri                = aws_sigv4_string("/"),
+                                        .query_str          = aws_sigv4_string("Param1=value1&Param2=value2"),
+                                        .payload            = aws_sigv4_string(NULL),
+                                        .service            = aws_sigv4_string("service"),
+                                        .region             = aws_sigv4_string("us-east-1") };
+  aws_sigv4_header_t auth_header = { .name = aws_sigv4_string(NULL), .value = aws_sigv4_string(NULL) };
   int rc = aws_sigv4_sign(&sigv4_params, &auth_header);
   const unsigned char* expected_auth_header_name  = "Authorization";
   const unsigned char* expected_auth_header_value = \
@@ -215,6 +203,22 @@ Signature=b97d918cfa904a5beff61c982a1b6f458b799221646efd99d3219ec94cdf2500";
   ck_assert_pstr_eq(auth_header.value.data, expected_auth_header_value);
   ck_assert_int_eq(auth_header.value.len, expected_len);
   ck_assert_mem_eq(auth_header.value.data, expected_auth_header_value, expected_len);
+
+  /* test with c str input */
+  unsigned char* auth_header_value = NULL;
+  rc = aws_sigv4_sign_with_cstr("wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY",
+                                "AKIDEXAMPLE",
+                                "GET",
+                                "/",
+                                "Param1=value1&Param2=value2",
+                                "example.amazonaws.com",
+                                "20150830T123600Z",
+                                "",
+                                "service",
+                                "us-east-1",
+                                &auth_header_value);
+  ck_assert_int_eq(rc, AWS_SIGV4_OK);
+  ck_assert_pstr_eq(auth_header_value, expected_auth_header_value);
 }
 END_TEST
 
