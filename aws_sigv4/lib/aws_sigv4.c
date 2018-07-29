@@ -130,13 +130,14 @@ void get_canonical_request(aws_sigv4_params_t* sigv4_params,
   /* TODO: Here we assume the URI and query string have already been encoded.
    *       Add encoding logic in future.
    */
+  str +=  aws_sigv4_sprintf(str, "%V\n%V\n",
+                            &sigv4_params->method,
+                            &sigv4_params->uri);
+
   aws_sigv4_str_t query_components[AWS_SIGV4_MAX_NUM_QUERY_COMPONENTS];
   size_t query_num = 0;
   parse_query_components(&sigv4_params->query_str, query_components, &query_num);
   qsort(query_components, query_num, sizeof(aws_sigv4_str_t), aws_sigv4_strncmp);
-  str +=  aws_sigv4_sprintf(str, "%V\n%V\n",
-                            &sigv4_params->method,
-                            &sigv4_params->uri);
   for (size_t i = 0; i < query_num; i++)
   {
     str += aws_sigv4_sprintf(str, "%V", &query_components[i]);
