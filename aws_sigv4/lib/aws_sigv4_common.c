@@ -18,6 +18,12 @@ aws_sigv4_str_t aws_sigv4_string(const unsigned char* cstr)
   return ret;
 }
 
+int aws_sigv4_strncmp(aws_sigv4_str_t* str1, aws_sigv4_str_t* str2)
+{
+  size_t len = str1->len <= str2->len ? str1->len : str2->len;
+  return strncmp(str1->data, str2->data, len);
+}
+
 /* reference: http://lxr.nginx.org/source/src/core/ngx_string.c */
 static int aws_sigv4_vslprintf(unsigned char* buf, unsigned char* last, const char* fmt, va_list args)
 {

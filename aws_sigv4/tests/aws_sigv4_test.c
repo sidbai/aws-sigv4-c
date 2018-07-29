@@ -118,7 +118,7 @@ START_TEST (AwsSigv4Test_CanonicalRequest)
                                         .host       = aws_sigv4_string("example.amazonaws.com"),
                                         .x_amz_date = aws_sigv4_string("20150830T123600Z"),
                                         .uri        = aws_sigv4_string("/"),
-                                        .query_str  = aws_sigv4_string("Param1=value1&Param2=value2"),
+                                        .query_str  = aws_sigv4_string("Param2=value2&Param1=value1"),
                                         .payload    = aws_sigv4_string(NULL) };
 
   get_canonical_request(&sigv4_params, &canonical_request);
@@ -181,7 +181,7 @@ START_TEST (AwsSigv4Test_AwsSigv4Sign)
                                         .host               = aws_sigv4_string("example.amazonaws.com"),
                                         .x_amz_date         = aws_sigv4_string("20150830T123600Z"),
                                         .uri                = aws_sigv4_string("/"),
-                                        .query_str          = aws_sigv4_string("Param1=value1&Param2=value2"),
+                                        .query_str          = aws_sigv4_string("Param2=value2&Param1=value1"),
                                         .payload            = aws_sigv4_string(NULL),
                                         .service            = aws_sigv4_string("service"),
                                         .region             = aws_sigv4_string("us-east-1") };
@@ -210,7 +210,7 @@ Signature=b97d918cfa904a5beff61c982a1b6f458b799221646efd99d3219ec94cdf2500";
                                 "AKIDEXAMPLE",
                                 "GET",
                                 "/",
-                                "Param1=value1&Param2=value2",
+                                "Param2=value2&Param1=value1",
                                 "example.amazonaws.com",
                                 "20150830T123600Z",
                                 "",

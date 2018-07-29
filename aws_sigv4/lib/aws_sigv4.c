@@ -7,9 +7,39 @@
 #define AWS_SIGV4_SIGNING_ALGORITHM           "AWS4-HMAC-SHA256"
 #define AWS_SIGV4_HEX_SHA256_LENGTH           SHA256_DIGEST_LENGTH * 2
 #define AWS_SIGV4_AUTH_HEADER_MAX_LEN         1024
-#define AWS_SIGV4_CANONICAL_REQUEST_BUF_LEN   4096
-#define AWS_SIGV4_STRING_TO_SIGN_BUF_LEN      4096
+#define AWS_SIGV4_CANONICAL_REQUEST_BUF_LEN   1024
+#define AWS_SIGV4_STRING_TO_SIGN_BUF_LEN      1024
 #define AWS_SIGV4_KEY_BUF_LEN                 256
+#define AWS_SIGV4_MAX_NUM_QUERY_COMPONENTS    50
+
+static inline void parse_query_components(aws_sigv4_str_t*  query_str,
+                                          aws_sigv4_str_t*  query_component_arr,
+                                          size_t*           arr_len)
+{
+  if (aws_sigv4_empty_str(query_str)
+      || query_component_arr == NULL)
+  {
+    arr_len = 0;
+    return;
+  }
+  size_t idx = 0;
+  unsigned char* c_ptr = query_str->data;
+  query_component_arr[0].data = c_ptr;
+  while (c_ptr != query_str->data + query_str->len)
+  {
+    if (*c_ptr == '&')
+    {
+      query_component_arr[idx].len = c_ptr - query_component_arr[idx].data;
+      query_component_arr[++idx].data = ++c_ptr;
+    }
+    else
+    {
+      c_ptr++;
+    }
+  }
+  query_component_arr[idx].len = c_ptr - query_component_arr[idx].data;
+  *arr_len = idx + 1;
+}
 
 void get_hexdigest(aws_sigv4_str_t* str_in, aws_sigv4_str_t* hex_out)
 {
@@ -100,11 +130,22 @@ void get_canonical_request(aws_sigv4_params_t* sigv4_params,
   /* TODO: Here we assume the URI and query string have already been encoded.
    *       Add encoding logic in future.
    */
-  /* TODO: Need to support sorting on params */
-  str +=  aws_sigv4_sprintf(str, "%V\n%V\n%V\n",
+  aws_sigv4_str_t query_components[AWS_SIGV4_MAX_NUM_QUERY_COMPONENTS];
+  size_t query_num = 0;
+  parse_query_components(&sigv4_params->query_str, query_components, &query_num);
+  qsort(query_components, query_num, sizeof(aws_sigv4_str_t), aws_sigv4_strncmp);
+  str +=  aws_sigv4_sprintf(str, "%V\n%V\n",
                             &sigv4_params->method,
-                            &sigv4_params->uri,
-                            &sigv4_params->query_str);
+                            &sigv4_params->uri);
+  for (size_t i = 0; i < query_num; i++)
+  {
+    str += aws_sigv4_sprintf(str, "%V", &query_components[i]);
+    if (i != query_num - 1)
+    {
+      *(str++) = '&';
+    }
+  }
+  *(str++) = '\n';
 
   aws_sigv4_str_t canonical_headers = { .data = str };
   get_canonical_headers(sigv4_params, &canonical_headers);
