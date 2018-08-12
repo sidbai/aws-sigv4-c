@@ -25,7 +25,8 @@ int aws_sigv4_strncmp(aws_sigv4_str_t* str1, aws_sigv4_str_t* str2)
 }
 
 /* reference: http://lxr.nginx.org/source/src/core/ngx_string.c */
-static int aws_sigv4_vslprintf(unsigned char* buf, unsigned char* last, const char* fmt, va_list args)
+static unsigned char* aws_sigv4_vslprintf(unsigned char* buf, unsigned char* last,
+                                          const char* fmt, va_list args)
 {
   unsigned char*    c_ptr = buf;
   aws_sigv4_str_t*  str;
@@ -59,25 +60,23 @@ static int aws_sigv4_vslprintf(unsigned char* buf, unsigned char* last, const ch
   }
   *c_ptr = '\0';
 finished:
-  return c_ptr - buf;
+  return c_ptr;
 }
 
-int aws_sigv4_sprintf(unsigned char* buf, const char* fmt, ...)
+unsigned char* aws_sigv4_sprintf(unsigned char* buf, const char* fmt, ...)
 {
-  int len = 0;
   va_list args;
   va_start(args, fmt);
-  len = aws_sigv4_vslprintf(buf, (void*) -1, fmt, args);
+  unsigned char* dst = aws_sigv4_vslprintf(buf, (void*) -1, fmt, args);
   va_end(args);
-  return len;
+  return dst;
 }
 
-int aws_sigv4_snprintf(unsigned char* buf, unsigned int n, const char* fmt, ...)
+unsigned char* aws_sigv4_snprintf(unsigned char* buf, unsigned int n, const char* fmt, ...)
 {
-  int len = 0;
   va_list args;
   va_start(args, fmt);
-  len = aws_sigv4_vslprintf(buf, buf + n, fmt, args);
+  unsigned char* dst = aws_sigv4_vslprintf(buf, buf + n, fmt, args);
   va_end(args);
-  return len;
+  return dst;
 }
