@@ -12,6 +12,8 @@
 #define AWS_SIGV4_KEY_BUF_LEN                 256
 #define AWS_SIGV4_MAX_NUM_QUERY_COMPONENTS    50
 
+typedef int (*aws_sigv4_compar_func_t)(const void*, const void*);
+
 static inline void parse_query_components(aws_sigv4_str_t*  query_str,
                                           aws_sigv4_str_t*  query_component_arr,
                                           size_t*           arr_len)
@@ -77,22 +79,22 @@ void get_signing_key(aws_sigv4_params_t* sigv4_params, aws_sigv4_str_t* signing_
   msg.len = aws_sigv4_snprintf(msg_buf, 8, "%V", &sigv4_params->x_amz_date);
   /* get HMAC SHA256 */
   HMAC(EVP_sha256(), key.data, key.len, msg.data, msg.len,
-       signing_key->data, &signing_key->len);
+       signing_key->data, (unsigned int *) &signing_key->len);
   /* kRegion = HMAC(kDate, Region) */
   key.len = aws_sigv4_sprintf(key_buf, "%V", signing_key);
   msg.len = aws_sigv4_sprintf(msg_buf, "%V", &sigv4_params->region);
   HMAC(EVP_sha256(), key.data, key.len, msg.data, msg.len,
-       signing_key->data, &signing_key->len);
+       signing_key->data, (unsigned int *) &signing_key->len);
   /* kService = HMAC(kRegion, Service) */
   key.len = aws_sigv4_sprintf(key_buf, "%V", signing_key);
   msg.len = aws_sigv4_sprintf(msg_buf, "%V", &sigv4_params->service);
   HMAC(EVP_sha256(), key.data, key.len, msg.data, msg.len,
-       signing_key->data, &signing_key->len);
+       signing_key->data, (unsigned int *) &signing_key->len);
   /* kSigning = HMAC(kService, "aws4_request") */
   key.len = aws_sigv4_sprintf(key_buf, "%V", signing_key);
   msg.len = aws_sigv4_sprintf(msg_buf, "aws4_request");
   HMAC(EVP_sha256(), key.data, key.len, msg.data, msg.len,
-       signing_key->data, &signing_key->len);
+       signing_key->data, (unsigned int *) &signing_key->len);
 }
 
 void get_credential_scope(aws_sigv4_params_t* sigv4_params,
@@ -137,7 +139,8 @@ void get_canonical_request(aws_sigv4_params_t* sigv4_params,
   aws_sigv4_str_t query_components[AWS_SIGV4_MAX_NUM_QUERY_COMPONENTS];
   size_t query_num = 0;
   parse_query_components(&sigv4_params->query_str, query_components, &query_num);
-  qsort(query_components, query_num, sizeof(aws_sigv4_str_t), aws_sigv4_strncmp);
+  qsort(query_components, query_num, sizeof(aws_sigv4_str_t),
+        (aws_sigv4_compar_func_t) aws_sigv4_strncmp);
   for (size_t i = 0; i < query_num; i++)
   {
     str += aws_sigv4_sprintf(str, "%V", &query_components[i]);
@@ -208,7 +211,7 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_header_t* auth_he
     goto err;
   }
 
-  auth_header->name.data  = AWS_SIGV4_AUTH_HEADER_NAME;
+  auth_header->name.data  = (unsigned char*) AWS_SIGV4_AUTH_HEADER_NAME;
   auth_header->name.len   = strlen(AWS_SIGV4_AUTH_HEADER_NAME);
 
   /* AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/<credential_scope> */
@@ -249,7 +252,7 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_header_t* auth_he
   HMAC(EVP_sha256(),
        signing_key.data, signing_key.len,
        string_to_sign.data, string_to_sign.len,
-       signed_msg.data, &signed_msg.len);
+       signed_msg.data, (unsigned int*) &signed_msg.len);
   aws_sigv4_str_t signature = { .data = str };
   get_hexdigest(&signed_msg, &signature);
   str += signature.len;

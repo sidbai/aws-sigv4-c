@@ -13,7 +13,7 @@ aws_sigv4_str_t aws_sigv4_string(const unsigned char* cstr)
   if (cstr)
   {
     ret.data = (unsigned char*) cstr;
-    ret.len  = strlen(cstr);
+    ret.len  = strlen((char*) cstr);
   }
   return ret;
 }
@@ -21,7 +21,7 @@ aws_sigv4_str_t aws_sigv4_string(const unsigned char* cstr)
 int aws_sigv4_strncmp(aws_sigv4_str_t* str1, aws_sigv4_str_t* str2)
 {
   size_t len = str1->len <= str2->len ? str1->len : str2->len;
-  return strncmp(str1->data, str2->data, len);
+  return strncmp((char*) str1->data, (char*) str2->data, len);
 }
 
 /* reference: http://lxr.nginx.org/source/src/core/ngx_string.c */
@@ -43,7 +43,7 @@ static int aws_sigv4_vslprintf(unsigned char* buf, unsigned char* last, const ch
           goto finished;
         }
         size_t cp_len = n_max >= str->len ? str->len : n_max;
-        strncpy(c_ptr, str->data, cp_len);
+        strncpy((char*) c_ptr, (char*) str->data, cp_len);
         c_ptr += cp_len;
         fmt += 2;
       }
