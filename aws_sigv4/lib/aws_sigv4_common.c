@@ -18,7 +18,7 @@ aws_sigv4_str_t aws_sigv4_string(const unsigned char* cstr)
   return ret;
 }
 
-int aws_sigv4_strncmp(aws_sigv4_str_t* str1, aws_sigv4_str_t* str2)
+int aws_sigv4_strcmp(aws_sigv4_str_t* str1, aws_sigv4_str_t* str2)
 {
   size_t len = str1->len <= str2->len ? str1->len : str2->len;
   return strncmp((char*) str1->data, (char*) str2->data, len);

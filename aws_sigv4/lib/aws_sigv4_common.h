@@ -8,7 +8,7 @@ typedef struct aws_sigv4_str_s {
 
 aws_sigv4_str_t aws_sigv4_string(const unsigned char* cstr);
 
-int aws_sigv4_strncmp(aws_sigv4_str_t* str1, aws_sigv4_str_t* str2);
+int aws_sigv4_strcmp(aws_sigv4_str_t* str1, aws_sigv4_str_t* str2);
 
 int aws_sigv4_empty_str(aws_sigv4_str_t* str);
 

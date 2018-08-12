@@ -142,7 +142,7 @@ void get_canonical_request(aws_sigv4_params_t* sigv4_params,
   size_t query_num = 0;
   parse_query_components(&sigv4_params->query_str, query_components, &query_num);
   qsort(query_components, query_num, sizeof(aws_sigv4_str_t),
-        (aws_sigv4_compar_func_t) aws_sigv4_strncmp);
+        (aws_sigv4_compar_func_t) aws_sigv4_strcmp);
   for (size_t i = 0; i < query_num; i++)
   {
     str = aws_sigv4_sprintf(str, "%V", &query_components[i]);
