@@ -138,17 +138,21 @@ void get_canonical_request(aws_sigv4_params_t* sigv4_params,
                            &sigv4_params->method,
                            &sigv4_params->uri);
 
-  aws_sigv4_str_t query_components[AWS_SIGV4_MAX_NUM_QUERY_COMPONENTS];
-  size_t query_num = 0;
-  parse_query_components(&sigv4_params->query_str, query_components, &query_num);
-  qsort(query_components, query_num, sizeof(aws_sigv4_str_t),
-        (aws_sigv4_compar_func_t) aws_sigv4_strcmp);
-  for (size_t i = 0; i < query_num; i++)
+  /* query string can be empty */
+  if (!aws_sigv4_empty_str(&sigv4_params->query_str))
   {
-    str = aws_sigv4_sprintf(str, "%V", &query_components[i]);
-    if (i != query_num - 1)
+    aws_sigv4_str_t query_components[AWS_SIGV4_MAX_NUM_QUERY_COMPONENTS];
+    size_t query_num = 0;
+    parse_query_components(&sigv4_params->query_str, query_components, &query_num);
+    qsort(query_components, query_num, sizeof(aws_sigv4_str_t),
+          (aws_sigv4_compar_func_t) aws_sigv4_strcmp);
+    for (size_t i = 0; i < query_num; i++)
     {
-      *(str++) = '&';
+      str = aws_sigv4_sprintf(str, "%V", &query_components[i]);
+      if (i != query_num - 1)
+      {
+        *(str++) = '&';
+      }
     }
   }
   *(str++) = '\n';
@@ -195,7 +199,6 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_header_t* auth_he
       || aws_sigv4_empty_str(&sigv4_params->access_key_id)
       || aws_sigv4_empty_str(&sigv4_params->method)
       || aws_sigv4_empty_str(&sigv4_params->uri)
-      || aws_sigv4_empty_str(&sigv4_params->query_str)
       || aws_sigv4_empty_str(&sigv4_params->host)
       || aws_sigv4_empty_str(&sigv4_params->x_amz_date)
       || aws_sigv4_empty_str(&sigv4_params->region)
