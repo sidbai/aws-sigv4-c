@@ -9,7 +9,7 @@
 #define AWS_SIGV4_AUTH_HEADER_MAX_LEN         1024
 #define AWS_SIGV4_CANONICAL_REQUEST_BUF_LEN   1024
 #define AWS_SIGV4_STRING_TO_SIGN_BUF_LEN      1024
-#define AWS_SIGV4_KEY_BUF_LEN                 256
+#define AWS_SIGV4_KEY_BUF_LEN                 32
 #define AWS_SIGV4_MAX_NUM_QUERY_COMPONENTS    50
 
 typedef int (*aws_sigv4_compar_func_t)(const void*, const void*);
