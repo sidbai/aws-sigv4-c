@@ -12,7 +12,7 @@
 #define AWS_SIGV4_KEY_BUF_LEN                 33
 #define AWS_SIGV4_MAX_NUM_QUERY_COMPONENTS    50
 
-typedef int (*aws_sigv4_compar_func_t)(const void*, const void*);
+typedef int (*aws_sigv4_compare_func_t)(const void*, const void*);
 
 static inline void parse_query_components(aws_sigv4_str_t*  query_str,
                                           aws_sigv4_str_t*  query_component_arr,
@@ -144,8 +144,9 @@ void get_canonical_request(aws_sigv4_params_t* sigv4_params,
     aws_sigv4_str_t query_components[AWS_SIGV4_MAX_NUM_QUERY_COMPONENTS];
     size_t query_num = 0;
     parse_query_components(&sigv4_params->query_str, query_components, &query_num);
+    // FIXME: Should sort query params only based on name
     qsort(query_components, query_num, sizeof(aws_sigv4_str_t),
-          (aws_sigv4_compar_func_t) aws_sigv4_strcmp);
+          (aws_sigv4_compare_func_t) aws_sigv4_strcmp);
     for (size_t i = 0; i < query_num; i++)
     {
       str = aws_sigv4_sprintf(str, "%V", &query_components[i]);
