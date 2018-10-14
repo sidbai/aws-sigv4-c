@@ -185,7 +185,7 @@ START_TEST (AwsSigv4Test_AwsSigv4Sign)
                                         .payload            = aws_sigv4_string(NULL),
                                         .service            = aws_sigv4_string("service"),
                                         .region             = aws_sigv4_string("us-east-1") };
-  aws_sigv4_header_t auth_header = { .name = aws_sigv4_string(NULL), .value = aws_sigv4_string(NULL) };
+  aws_sigv4_header_t auth_header = { .key = aws_sigv4_string(NULL), .value = aws_sigv4_string(NULL) };
   int rc = aws_sigv4_sign(&sigv4_params, &auth_header);
   const unsigned char* expected_auth_header_name  = "Authorization";
   const unsigned char* expected_auth_header_value = \
@@ -196,9 +196,9 @@ Signature=b97d918cfa904a5beff61c982a1b6f458b799221646efd99d3219ec94cdf2500";
   int expected_len = strlen(expected_auth_header_value);
   ck_assert_int_eq(rc, AWS_SIGV4_OK);
 
-  ck_assert_pstr_eq(auth_header.name.data, expected_auth_header_name);
-  ck_assert_int_eq(auth_header.name.len, strlen(expected_auth_header_name));
-  ck_assert_mem_eq(auth_header.name.data, expected_auth_header_name, strlen(expected_auth_header_name));
+  ck_assert_pstr_eq(auth_header.key.data, expected_auth_header_name);
+  ck_assert_int_eq(auth_header.key.len, strlen(expected_auth_header_name));
+  ck_assert_mem_eq(auth_header.key.data, expected_auth_header_name, strlen(expected_auth_header_name));
 
   ck_assert_pstr_eq(auth_header.value.data, expected_auth_header_value);
   ck_assert_int_eq(auth_header.value.len, expected_len);

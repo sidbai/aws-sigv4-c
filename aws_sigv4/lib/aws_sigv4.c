@@ -14,32 +14,62 @@
 
 typedef int (*aws_sigv4_compare_func_t)(const void*, const void*);
 
-static inline void parse_query_components(aws_sigv4_str_t*  query_str,
-                                          aws_sigv4_str_t*  query_component_arr,
-                                          size_t*           arr_len)
+static int aws_sigv4_kv_cmp(aws_sigv4_kv_t* p1,
+                            aws_sigv4_kv_t* p2)
+{
+  size_t len = p1->key.len <= p2->key.len ? p1->key.len : p2->key.len;
+  return strncmp((char*) p1->key.data, (char*) p2->key.data, len);
+}
+
+static unsigned char* construct_query_str(unsigned char*  dst_cstr,
+                                          aws_sigv4_kv_t* query_params,
+                                          size_t          query_num)
+{
+  for (size_t i = 0; i < query_num; i++)
+  {
+    /* here we assume args are percent-encoded */
+    dst_cstr = aws_sigv4_sprintf(dst_cstr, "%V=%V",
+                                 &query_params[i].key, &query_params[i].value);
+    if (i != query_num - 1)
+    {
+      *(dst_cstr++) = '&';
+    }
+  }
+  return dst_cstr;
+}
+
+static void parse_query_params(aws_sigv4_str_t* query_str,
+                               aws_sigv4_kv_t*  query_params,
+                               size_t*          arr_len)
 {
   if (aws_sigv4_empty_str(query_str)
-      || query_component_arr == NULL)
+      || query_params == NULL)
   {
     arr_len = 0;
     return;
   }
   size_t idx = 0;
   unsigned char* c_ptr = query_str->data;
-  query_component_arr[0].data = c_ptr;
+  query_params[0].key.data = c_ptr;
+  /* here we assume query string are well-formed */
   while (c_ptr != query_str->data + query_str->len)
   {
-    if (*c_ptr == '&')
+    if (*c_ptr == '=')
     {
-      query_component_arr[idx].len = c_ptr - query_component_arr[idx].data;
-      query_component_arr[++idx].data = ++c_ptr;
+      query_params[idx].key.len     = c_ptr - query_params[idx].key.data;
+      query_params[idx].value.data  = ++c_ptr;
+    }
+    else if (*c_ptr == '&')
+    {
+      query_params[idx].value.len   = c_ptr - query_params[idx].value.data;
+      query_params[++idx].key.data  = ++c_ptr;
     }
     else
     {
       c_ptr++;
     }
   }
-  query_component_arr[idx].len = c_ptr - query_component_arr[idx].data;
+  query_params[idx].value.len = c_ptr - query_params[idx].value.data;
   *arr_len = idx + 1;
 }
 
@@ -141,20 +171,12 @@ void get_canonical_request(aws_sigv4_params_t* sigv4_params,
   /* query string can be empty */
   if (!aws_sigv4_empty_str(&sigv4_params->query_str))
   {
-    aws_sigv4_str_t query_components[AWS_SIGV4_MAX_NUM_QUERY_COMPONENTS];
+    aws_sigv4_kv_t query_params[AWS_SIGV4_MAX_NUM_QUERY_COMPONENTS];
     size_t query_num = 0;
-    parse_query_components(&sigv4_params->query_str, query_components, &query_num);
-    // FIXME: Should sort query params only based on name
-    qsort(query_components, query_num, sizeof(aws_sigv4_str_t),
-          (aws_sigv4_compare_func_t) aws_sigv4_strcmp);
-    for (size_t i = 0; i < query_num; i++)
-    {
-      str = aws_sigv4_sprintf(str, "%V", &query_components[i]);
-      if (i != query_num - 1)
-      {
-        *(str++) = '&';
-      }
-    }
+    parse_query_params(&sigv4_params->query_str, query_params, &query_num);
+    qsort(query_params, query_num, sizeof(aws_sigv4_kv_t),
+          (aws_sigv4_compare_func_t) aws_sigv4_kv_cmp);
+    str = construct_query_str(str, query_params, query_num);
   }
   *(str++) = '\n';
 
@@ -217,8 +239,8 @@ int aws_sigv4_sign(aws_sigv4_params_t* sigv4_params, aws_sigv4_header_t* auth_he
     goto err;
   }
 
-  auth_header->name.data  = (unsigned char*) AWS_SIGV4_AUTH_HEADER_NAME;
-  auth_header->name.len   = strlen(AWS_SIGV4_AUTH_HEADER_NAME);
+  auth_header->key.data  = (unsigned char*) AWS_SIGV4_AUTH_HEADER_NAME;
+  auth_header->key.len   = strlen(AWS_SIGV4_AUTH_HEADER_NAME);
 
   /* AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/<credential_scope> */
   unsigned char* str = auth_header->value.data;

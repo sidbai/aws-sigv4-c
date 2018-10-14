@@ -6,6 +6,11 @@ typedef struct aws_sigv4_str_s {
   unsigned int    len;
 } aws_sigv4_str_t;
 
+typedef struct aws_sigv4_kv_s {
+  aws_sigv4_str_t key;
+  aws_sigv4_str_t value;
+} aws_sigv4_kv_t;
+
 aws_sigv4_str_t aws_sigv4_string(const unsigned char* cstr);
 
 int aws_sigv4_strcmp(aws_sigv4_str_t* str1, aws_sigv4_str_t* str2);

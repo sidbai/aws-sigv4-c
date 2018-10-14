@@ -7,10 +7,7 @@
 
 #include "aws_sigv4_common.h"
 
-typedef struct aws_sigv4_header_s {
-  aws_sigv4_str_t name;
-  aws_sigv4_str_t value;
-} aws_sigv4_header_t;
+typedef aws_sigv4_kv_t aws_sigv4_header_t;
 
 typedef struct aws_sigv4_params_s {
   /* AWS credential parameters */
